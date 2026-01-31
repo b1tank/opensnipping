@@ -202,22 +202,22 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
 - [x] 13d. Add matching TS types in `types.ts`: `EVENT_SCREENSHOT_COMPLETE`, `ScreenshotCompleteEvent`
 
 #### 3.2 Backend: Linux Implementation
-- [ ] 13e. Implement `capture_screenshot` in `capture/linux.rs`: build GStreamer pipeline `pipewiresrc path={node_id} ! videoconvert ! pngenc ! filesink location={output_path}`, run to EOS, cleanup
-- [ ] 13f. Implement `capture_screenshot` stub in `capture/fake.rs`: generate placeholder PNG (solid color) for contract tests
-- [ ] 13g. Add `take_screenshot` Tauri command in `lib.rs`: call `request_selection()` → `capture_screenshot()` → emit `screenshot_complete` event; output to `/tmp/opensnipping-{uuid}.png`
+- [x] 13e. Implement `capture_screenshot` in `capture/linux.rs`: build GStreamer pipeline `pipewiresrc path={node_id} ! videoconvert ! pngenc ! filesink location={output_path}`, run to EOS, cleanup
+- [x] 13f. Implement `capture_screenshot` stub in `capture/fake.rs`: generate placeholder PNG (solid color) for contract tests
+- [x] 13g. Add `take_screenshot` Tauri command in `lib.rs`: call `request_selection()` → `capture_screenshot()` → emit `screenshot_complete` event; output to `/tmp/opensnipping-{uuid}.png`
 
 #### 3.3 Frontend: Annotation Component
-- [ ] 14a. Create `src/components/AnnotationCanvas.tsx`: props `imagePath`, `onExport`, `onCancel`; load image via `convertFileSrc()` asset protocol
-- [ ] 14b. Implement pen tool: fixed red color, 3px stroke width, mouse/touch drawing to canvas
-- [ ] 14c. Track strokes in state: `Array<{points: [x,y][], color, width}>`; redraw on change
-- [ ] 14d. Add Undo (pop last stroke) and Clear (reset array) actions
-- [ ] 14e. Add Export: merge layers → `canvas.toDataURL('image/png')` → trigger download
+- [x] 14a. Create `src/components/AnnotationCanvas.tsx`: props `imagePath`, `onExport`, `onCancel`; load image via `convertFileSrc()` asset protocol
+- [x] 14b. Implement pen tool: fixed red color, 3px stroke width, mouse/touch drawing to canvas
+- [x] 14c. Track strokes in state: `Array<{points: [x,y][], color, width}>`; redraw on change
+- [x] 14d. Add Undo (pop last stroke) and Clear (reset array) actions
+- [x] 14e. Add Export: merge layers → `canvas.toDataURL('image/png')` → trigger download
 
 #### 3.4 Frontend: Integration
-- [ ] 14f. Update `App.tsx`: add `screenshotPath` state, listen to `EVENT_SCREENSHOT_COMPLETE`
-- [ ] 14g. Wire screenshot flow: when `mode === 'screenshot'` + button clicked → `invoke('take_screenshot')`; on event → show `<AnnotationCanvas>`
-- [ ] 14h. Add Cancel handler: clear `screenshotPath`, return to idle UI
-- [ ] 14i. Add annotation CSS in `App.css`: full-screen overlay, toolbar with buttons
+- [x] 14f. Update `App.tsx`: add `screenshotPath` state, listen to `EVENT_SCREENSHOT_COMPLETE`
+- [x] 14g. Wire screenshot flow: when `mode === 'screenshot'` + button clicked → `invoke('take_screenshot')`; on event → show `<AnnotationCanvas>`
+- [x] 14h. Add Cancel handler: clear `screenshotPath`, return to idle UI
+- [x] 14i. Add annotation CSS in `App.css`: full-screen overlay, toolbar with buttons
 
 #### 3.5 Tests
 - [ ] 15a. Rust: unit test for temp path generation (unique, correct dir)

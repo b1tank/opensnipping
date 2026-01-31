@@ -71,8 +71,19 @@ describe("App", () => {
     });
   });
 
-  it("shows Start Capture button when idle", async () => {
+  it("shows Take Screenshot button in screenshot mode when idle", async () => {
     render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Take Screenshot")).toBeInTheDocument();
+    });
+  });
+
+  it("shows Start Capture button in record mode when idle", async () => {
+    render(<App />);
+
+    // Switch to record mode
+    fireEvent.click(screen.getByText("Toggle Mode"));
 
     await waitFor(() => {
       expect(screen.getByText("Start Capture")).toBeInTheDocument();
@@ -81,6 +92,9 @@ describe("App", () => {
 
   it("calls start_capture with config when Start Capture clicked", async () => {
     render(<App />);
+
+    // Switch to record mode first
+    fireEvent.click(screen.getByText("Toggle Mode"));
 
     await waitFor(() => {
       expect(screen.getByText("Start Capture")).toBeInTheDocument();

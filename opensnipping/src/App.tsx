@@ -7,10 +7,13 @@ import {
   StateChangedEvent,
   ErrorEvent,
   SelectionCompleteEvent,
+  ScreenshotCompleteEvent,
   EVENT_STATE_CHANGED,
   EVENT_ERROR,
   EVENT_SELECTION_COMPLETE,
+  EVENT_SCREENSHOT_COMPLETE,
 } from "./types";
+import { AnnotationCanvas } from "./components/AnnotationCanvas";
 
 type AppMode = "screenshot" | "record";
 
@@ -19,6 +22,8 @@ function App() {
   const [captureState, setCaptureState] = useState<CaptureState>("idle");
   const [error, setError] = useState<string | null>(null);
   const [pingResult, setPingResult] = useState<string>("");
+  const [screenshotPath, setScreenshotPath] = useState<string | null>(null);
+  const [isCapturingScreenshot, setIsCapturingScreenshot] = useState(false);
 
   // Listen to Rust events
   useEffect(() => {
@@ -40,6 +45,13 @@ function App() {
     // Listen for selection complete (for logging/debugging)
     listen<SelectionCompleteEvent>(EVENT_SELECTION_COMPLETE, (event) => {
       console.log("Selection complete:", event.payload.selection);
+    }).then((unlisten) => unlisteners.push(unlisten));
+
+    // Listen for screenshot complete
+    listen<ScreenshotCompleteEvent>(EVENT_SCREENSHOT_COMPLETE, (event) => {
+      console.log("Screenshot complete:", event.payload);
+      setScreenshotPath(event.payload.path);
+      setIsCapturingScreenshot(false);
     }).then((unlisten) => unlisteners.push(unlisten));
 
     // Fetch initial state
@@ -117,6 +129,43 @@ function App() {
     }
   }
 
+  async function handleTakeScreenshot() {
+    setIsCapturingScreenshot(true);
+    setError(null);
+    try {
+      await invoke("take_screenshot", {
+        config: {
+          source: "screen",
+          fps: 30,
+          include_cursor: true,
+          audio: { system: false, mic: false },
+          container: "mp4",
+          output_path: "/tmp/screenshot.png",
+        },
+      });
+    } catch (e) {
+      setError(String(e));
+      setIsCapturingScreenshot(false);
+    }
+  }
+
+  function handleScreenshotExport(dataUrl: string) {
+    // Trigger download
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = `screenshot-${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Clear screenshot state
+    setScreenshotPath(null);
+  }
+
+  function handleScreenshotCancel() {
+    setScreenshotPath(null);
+  }
+
   const getStateLabel = (state: CaptureState) => {
     const labels: Record<CaptureState, string> = {
       idle: "Idle",
@@ -131,6 +180,15 @@ function App() {
 
   return (
     <main className="container">
+      {/* Screenshot annotation overlay */}
+      {screenshotPath && (
+        <AnnotationCanvas
+          imagePath={screenshotPath}
+          onExport={handleScreenshotExport}
+          onCancel={handleScreenshotCancel}
+        />
+      )}
+
       <h1>OpenSnipping</h1>
       <p className="mode-indicator">
         Mode: <strong>{mode === "screenshot" ? "Screenshot" : "Record"}</strong>
@@ -151,9 +209,18 @@ function App() {
       </div>
 
       <div className="button-row">
-        {captureState === "idle" && (
+        {captureState === "idle" && mode === "record" && (
           <button onClick={handleStartCapture} className="btn btn-primary">
             Start Capture
+          </button>
+        )}
+        {captureState === "idle" && mode === "screenshot" && (
+          <button
+            onClick={handleTakeScreenshot}
+            className="btn btn-primary"
+            disabled={isCapturingScreenshot}
+          >
+            {isCapturingScreenshot ? "Capturing..." : "Take Screenshot"}
           </button>
         )}
         {captureState === "selecting" && (
