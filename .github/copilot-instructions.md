@@ -161,6 +161,14 @@ Keep the description lowercase, imperative, and under 50 characters.
 
 - Commit and push without asking for approval, but only when the commit is logically cohesive, compiled and at least minimally verified by simple tests or manual checks.
 
+**Commit quality evidence:** Existing tests passing is necessary but NOT sufficient. Before committing, explicitly state the evidence that the new code is correct:
+- **New test added**: A test that exercises the new code path and passes
+- **Contract-only change**: Type/event additions with no runtime behavior (harmless until wired)
+- **Refactor with existing coverage**: Existing tests already cover the changed behavior
+- **Manual verification**: Specific steps performed and observed results
+
+Always include a brief rationale in the commit workflow (e.g., "Tests pass; new `capture_screenshot` method is interface-only, no callers yet").
+
 ## Parallel Work & Agent Delegation
 
 When you discover independent secondary work (bugs, missing docs/tests, refactor opportunities) while on a primary task, prompt the human with delegation options:

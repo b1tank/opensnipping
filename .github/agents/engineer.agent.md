@@ -98,3 +98,16 @@ Report back: [what info to return when complete]
 - Commit message format: `[category]: brief description`
 - Commit and push without asking for approval, but only when the commit is logically cohesive, compiled and at least minimally verified by simple tests or manual checks.
 - Never force push to main
+
+### Commit Quality Evidence (Required)
+
+Existing tests passing is necessary but NOT sufficient. Before committing, state explicit evidence that the new code is correct:
+
+| Evidence Type | When to Use | Example |
+|---------------|-------------|--------|
+| **New test** | New logic/behavior | "Added `test_screenshot_event_fields` which passes" |
+| **Contract-only** | Type/event/interface additions | "Interface-only; no callers yet, harmless" |
+| **Existing coverage** | Refactor or minor change | "Existing `test_state_transitions` covers this path" |
+| **Manual verification** | UI or integration work | "Ran `tauri dev`, clicked X, observed Y" |
+
+Always include a brief rationale before committing (e.g., "Tests pass; new struct is unused until wired in next task").
