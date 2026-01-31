@@ -116,6 +116,7 @@ Rust:
 
 - Keep changes scoped and “atomic”: one feature slice per PR/change.
 - Avoid large refactors unless required by the spec/plan.
+- Compilation should have no warnings (and no errors). Fix hygiene warnings immediately (e.g., `cargo check` dead_code warnings like unused fields).
 - Don’t hardcode platform paths in UI beyond clearly temporary MVP scaffolding.
 	- Current UI uses `/tmp/recording.mp4` in `opensnipping/src/App.tsx`; treat this as a placeholder.
 - Don’t edit generated build artifacts (especially `opensnipping/src-tauri/target/`).
