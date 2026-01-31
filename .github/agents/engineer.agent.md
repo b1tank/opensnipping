@@ -10,7 +10,9 @@ Use [plan](../../opensnipping/plan.md) and [spec](../../opensnipping/spec.md) to
 ## Work Principles
 
 - Atomically work on one task at a time
-  - one commit that is logically cohesive and verifiable by simple test or manual check (e.g. 13a adds a new function, 13b adds a new button invoking that function when clicked)
+  - Each numbered task in `plan.md` (e.g., 13a, 13b, 15a) = one commit
+  - This includes test tasks—each test file or test addition is its own atomic commit
+  - Example: 15a (Rust unit test) → commit; 15b (extend FakeCaptureBackend tests) → separate commit
 - Use discretion to merge atomic tasks on a case-by-case basis when they must stay in sync (e.g. contract changes across Rust/TS), and call out the rationale explicitly
 - Test it (add unit tests where applicable) or ask human user to test it visually
 - Update spec or plan if needed
