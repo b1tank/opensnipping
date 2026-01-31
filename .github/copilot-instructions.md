@@ -39,6 +39,7 @@ Notes:
 - Make small, incremental changes that are easy to review and test.
 - Keep platform-specific logic in Rust: Anything OS/media/capture-related belongs in the backend; frontend stays declarative and testable with mocks.
 - Error paths are first-class: Every new command/event should have explicit failure behavior (error code + message), and the UI should display something user-visible rather than silently failing.
+- Add clear, intentional logging at key control points (command entry/exit, state transitions, and error boundaries) to aid debugging and maintenance.
 - No hidden side effects: Don't introduce implicit background tasks/timers without an explicit lifecycle (start/stop) and a clear owner (usually the state machine).
 - Prefer additive over refactor: Avoid broad refactors while implementing features. If a refactor is truly required, do it as a separate atomic step with no behavior change.
 
@@ -113,6 +114,8 @@ Rust:
 **Deterministic tests over "real device" tests:** Add/adjust unit tests around the Rust domain logic and Vitest UI mocks; avoid tests that require a running Tauri window unless absolutely necessary.
 
 **Manual verification guidance:** When asking for or running visual verification, always print the manual verification steps before running any server/startup command (e.g., `npm run tauri dev`) so the user can follow along.
+
+**Error handling maintenance:** If tests reveal new error types or cases, add explicit handling in code immediately (map to user-visible errors, log with context, and update tests). Keep error handling additive and consistent to make future fixes easier.
 
 ## Guardrails / Hygiene
 
