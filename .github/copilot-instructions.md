@@ -178,6 +178,8 @@ Always include a brief rationale in the commit workflow (e.g., "Tests pass; new 
 - If you can verify correctness yourself (tests pass, contract-only, logic is deterministic) → commit and push
 - If the change requires visual/UX verification you cannot perform → ask human first with verification steps, then commit after confirmation
 
+**Proactive UI/UX verification:** When a change adds or modifies user-visible behavior (new buttons, visual elements, workflows, or interactions), proactively offer the human a chance to see it before committing—even if tests pass. Frame it as an opportunity, not a blocker (e.g., "Want to see the new [feature] in action before I commit?"). Print verification steps first, then offer to start the dev server.
+
 ## Parallel Work & Agent Delegation
 
 When you discover independent secondary work (bugs, missing docs/tests, refactor opportunities) while on a primary task, prompt the human with delegation options:

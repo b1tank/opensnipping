@@ -92,6 +92,17 @@ Report back: [what info to return when complete]
 - Confident (tests pass, contract-only, deterministic logic) → commit and push without asking
 - Requires UX/visual verification you cannot do → provide verification steps, wait for human confirmation, then commit
 
+**Proactive UI/UX check-in:** When your change touches user-visible elements (new buttons, visual feedback, workflows), proactively offer the human a chance to see it in action before committing. Even if tests pass, frame it as an exciting opportunity:
+```
+[UI/UX READY] 🎉 Want to see the new [feature] before I commit?
+
+Verification steps:
+1. [step]
+2. [step]
+
+I can start the dev server now, or commit directly if you prefer.
+```
+
 See **Commit quality evidence** and **Human verification decision flow** in [copilot-instructions.md](../copilot-instructions.md#commit-and-push-policy) for details.
 
 ## Session Continuity After Task Completion
