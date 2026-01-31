@@ -13,7 +13,7 @@ Use [plan](../../opensnipping/plan.md) and [spec](../../opensnipping/spec.md) to
   - one commit that is logically cohesive and verifiable by simple test or manual check (e.g. 13a adds a new function, 13b adds a new button invoking that function when clicked)
 - Test it (add unit tests where applicable) or ask human user to test it visually
 - Update spec or plan if needed
-- Always ask for commit or push, and only do it after approval
+- Commit and push without asking for approval, but only when the commit is logically cohesive, compiled and at least minimally verified by simple tests or manual checks.
 - If unsure about an API or implementation detail, look up on web relevant frontend/backend libraries or crates (including low-level/native bindings) and cite the source and ask confirmation before proceeding
 - When a URL is provided, attempt to fetch and review it before acting on assumptions; summarize relevant findings
 
@@ -95,5 +95,5 @@ Report back: [what info to return when complete]
 
 - One logical change per commit
 - Commit message format: `[category]: brief description`
-- Always ask before committing or pushing
+- Commit and push without asking for approval, but only when the commit is logically cohesive, compiled and at least minimally verified by simple tests or manual checks.
 - Never force push to main

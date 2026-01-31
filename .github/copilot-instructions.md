@@ -157,6 +157,10 @@ Examples:
 
 Keep the description lowercase, imperative, and under 50 characters.
 
+## Commit and Push Policy
+
+- Commit and push without asking for approval, but only when the commit is logically cohesive, compiled and at least minimally verified by simple tests or manual checks.
+
 ## Parallel Work & Agent Delegation
 
 When you discover independent secondary work (bugs, missing docs/tests, refactor opportunities) while on a primary task, prompt the human with delegation options:
