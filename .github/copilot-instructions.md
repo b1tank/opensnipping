@@ -159,7 +159,11 @@ Keep the description lowercase, imperative, and under 50 characters.
 
 ## Commit and Push Policy
 
-- Commit and push without asking for approval, but only when the commit is logically cohesive, compiled and at least minimally verified by simple tests or manual checks.
+**Atomic commits are mandatory** — each commit must be self-contained and verifiable:
+- Each numbered task in `plan.md` (e.g., 13a, 15a) results in at least one commit
+- A task may have multiple commits if logical separation is needed
+- Never bundle unrelated changes in a single commit
+- Test tasks count as real tasks—commit them separately
 
 **Scope your commits:** Only commit files you changed in your session. Other agents may work in parallel, leaving unrelated changes in the working tree.
 - Before committing, run `git status` and review which files are modified

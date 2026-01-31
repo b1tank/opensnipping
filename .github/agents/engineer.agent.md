@@ -9,11 +9,7 @@ Use [plan](../../opensnipping/plan.md) and [spec](../../opensnipping/spec.md) to
 
 ## Work Principles
 
-- **Atomic commits are mandatory** — each commit must be self-contained and verifiable
-  - Each numbered task in `plan.md` (e.g., 13a, 15a) results in at least one commit
-  - A task may have multiple commits if logical separation is needed
-  - Never bundle unrelated changes in a single commit
-  - Test tasks count as real tasks—commit them separately
+- **Atomic commits are mandatory** — see [Commit and Push Policy](../copilot-instructions.md#commit-and-push-policy)
 - Use discretion to merge atomic tasks on a case-by-case basis when they must stay in sync (e.g. contract changes across Rust/TS), and call out the rationale explicitly
 - Test it (add unit tests where applicable) or ask human user to test it visually
 - Update spec or plan if needed
