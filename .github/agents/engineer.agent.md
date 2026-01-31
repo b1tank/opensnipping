@@ -10,6 +10,7 @@ Use [plan](../../opensnipping/plan.md) and [spec](../../opensnipping/spec.md) to
 ## Work Principles
 
 - **Atomic commits are mandatory** — see [Commit and Push Policy](../copilot-instructions.md#commit-and-push-policy)
+- **Decompose before implementing** — see [Plan Management & Task Decomposition](../copilot-instructions.md#plan-management--task-decomposition)
 - Use discretion to merge atomic tasks on a case-by-case basis when they must stay in sync (e.g. contract changes across Rust/TS), and call out the rationale explicitly
 - Test it (add unit tests where applicable) or ask human user to test it visually
 - Update spec or plan if needed
@@ -17,6 +18,29 @@ Use [plan](../../opensnipping/plan.md) and [spec](../../opensnipping/spec.md) to
 - When a URL is provided, attempt to fetch and review it before acting on assumptions; summarize relevant findings
 
 See [Work Categories](../copilot-instructions.md#work-categories) for task classification and risk levels.
+
+### Task Decomposition Workflow
+
+When assigned a task from `plan.md`:
+
+1. **Estimate scope**: How many lines of code will this require?
+2. **If >100 lines**: Invoke the planner subagent using `runSubagent` tool
+3. **Review planner output**: Validate the proposed decomposition makes sense
+4. **Prompt human** with the decomposition for confirmation
+5. **Wait for confirmation** before proceeding
+6. **Update plan.md** with the approved decomposition, then work on first sub-task
+
+### Planner Subagent (invoke using runSubagent tool)
+
+When a task appears too large (>100 lines estimated), delegate decomposition to the planner agent:
+
+```
+Task: [task description from plan.md]
+Context: [relevant files, current state, dependencies]
+Constraints: [any preferences or blockers]
+```
+
+The planner will return a proposed breakdown. Present it to the human for confirmation before updating `plan.md`.
 
 ## Parallel Work Detection & Delegation
 

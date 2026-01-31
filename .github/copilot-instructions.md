@@ -142,6 +142,33 @@ All work falls into: **feat**, **fix**, **docs**, **refactor**, **test**, **chor
 | `chore`    | Build, CI, config, or maintenance tasks          | Low |
 | `agent`    | Improving agent instructions or prompts          | Low |
 
+## Plan Management & Task Decomposition
+
+**`plan.md` is a living document** — not a static roadmap. Treat it as continuously evolving based on discovered complexity.
+
+**Before starting any task**, evaluate whether it needs further decomposition:
+
+| Task Size Indicator | Typical Lines Changed | Action |
+|---------------------|----------------------|--------|
+| Simple fix | 1–10 lines | Proceed directly |
+| Small piece (test, function, interface) | 10–50 lines | Proceed directly |
+| Medium task | 50–100 lines | Acceptable, but review scope |
+| Large task | >100 lines | **Must decompose first** |
+
+**Decomposition workflow:**
+1. If a task appears to require >100 lines of code, stop before implementation
+2. Break it into sub-tasks with checkboxes in `plan.md` (each sub-task should be one atomic commit)
+3. Ask human for confirmation: "I've decomposed [task] into [N] sub-tasks. Does this look right?"
+4. Proceed only after confirmation
+
+**Signs a task needs decomposition:**
+- Multiple unrelated files must change
+- Multiple state transitions or new states required
+- Both backend and frontend changes beyond contract sync
+- Task description uses vague words like "implement pipeline" or "add full support"
+
+**Do not over-decompose:** If a task can be completed in <50 lines with clear intent, keep it as one task.
+
 ## Commit Message Guide
 
 Use the format: `<category>: <short description>`
@@ -197,7 +224,8 @@ See `.github/agents/engineer.agent.md` for detailed delegation protocols and pro
 ## Agent Notes
 
 There is an agent entrypoint at `.github/agents/engineer.agent.md` that points to the spec/plan and requests atomic steps + tests.
-There is also a pre-commit agent at `.github/agents/pre-commit.agent.md` that should be invoked via `runsubagent` before committing.
+There is a pre-commit agent at `.github/agents/pre-commit.agent.md` that should be invoked via `runSubagent` before committing.
+There is a planner agent at `.github/agents/planner.agent.md` for decomposing large tasks into atomic sub-tasks.
 
 When uncertain:
 - Read `opensnipping/spec.md` and `opensnipping/plan.md` first.
