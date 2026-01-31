@@ -49,6 +49,21 @@ pub struct ScreenshotCompleteEvent {
     pub height: u32,
 }
 
+/// Event emitted when recording starts
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecordingStartedEvent {
+    pub output_path: String,
+}
+
+/// Event emitted when recording stops and finalization completes
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecordingStoppedEvent {
+    pub path: String,
+    pub duration_ms: u64,
+    pub width: u32,
+    pub height: u32,
+}
+
 /// Event names for Tauri event system
 pub mod event_names {
     pub const STATE_CHANGED: &str = "capture:state_changed";
@@ -57,4 +72,6 @@ pub mod event_names {
     pub const ERROR: &str = "capture:error";
     pub const SELECTION_COMPLETE: &str = "capture:selection_complete";
     pub const SCREENSHOT_COMPLETE: &str = "capture:screenshot_complete";
+    pub const RECORDING_STARTED: &str = "capture:recording_started";
+    pub const RECORDING_STOPPED: &str = "capture:recording_stopped";
 }
