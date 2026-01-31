@@ -188,20 +188,49 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
 **Done when**: clicking “Start” shows the GNOME portal picker and returns a usable stream descriptor (logged).
 
 ### Milestone 3 — Screenshot MVP (1 day)
-- [ ] 13. Build Linux screenshot pipeline:
-   - connect to PipeWire stream
-   - grab a single frame
-   - write PNG to disk (`image` crate) OR via GStreamer `pngenc`
-- [ ] 14. UI: after screenshot captured, show annotation screen:
-   - single pen color
-   - fixed stroke width
-   - undo/clear
-   - export (overwrite/copy)
-- [ ] 15. Add tests:
-   - UI: annotation component tests (draw action mocked; undo/clear actions)
-   - Rust: unit test for filename/path generation and “screenshot completed” event emission
+
+**Decisions made:**
+- Frame capture: `pipewire-rs` + `image` crate (lightweight, unify with GStreamer in M4 if needed)
+- State: UI-only annotation (backend captures, React manages drawing state)
+- Transfer: temp file path via Tauri asset protocol (efficient for large images)
+
+#### 3.1 Backend: Dependencies & Contract
+- [ ] 13a. Add Rust dependencies to `Cargo.toml`: `pipewire = "0.8"`, `image = "0.25"`, `uuid = { version = "1", features = ["v4"] }`
+- [ ] 13b. Extend `CaptureBackend` trait in `capture/mod.rs`: add `capture_screenshot(&self, selection: &SelectionResult, output_path: &Path) -> Result<ScreenshotResult, CaptureBackendError>` with `ScreenshotResult { path, width, height }`
+- [ ] 13c. Add `ScreenshotCompleteEvent` in `events.rs`: `capture:screenshot_complete` with `{ path, width, height }`
+- [ ] 13d. Add matching TS types in `types.ts`: `EVENT_SCREENSHOT_COMPLETE`, `ScreenshotCompleteEvent`
+
+#### 3.2 Backend: Linux Implementation
+- [ ] 13e. Implement `capture_screenshot` in `capture/linux.rs`: connect to PipeWire stream via `node_id`, grab single frame buffer (BGRA), encode PNG via `image::save_buffer()`, cleanup stream
+- [ ] 13f. Implement `capture_screenshot` stub in `capture/fake.rs`: generate placeholder PNG (solid color) for contract tests
+- [ ] 13g. Add `take_screenshot` Tauri command in `lib.rs`: call `request_selection()` → `capture_screenshot()` → emit `screenshot_complete` event; output to `/tmp/opensnipping-{uuid}.png`
+
+#### 3.3 Frontend: Annotation Component
+- [ ] 14a. Create `src/components/AnnotationCanvas.tsx`: props `imagePath`, `onExport`, `onCancel`; load image via `convertFileSrc()` asset protocol
+- [ ] 14b. Implement pen tool: fixed red color, 3px stroke width, mouse/touch drawing to canvas
+- [ ] 14c. Track strokes in state: `Array<{points: [x,y][], color, width}>`; redraw on change
+- [ ] 14d. Add Undo (pop last stroke) and Clear (reset array) actions
+- [ ] 14e. Add Export: merge layers → `canvas.toDataURL('image/png')` → trigger download
+
+#### 3.4 Frontend: Integration
+- [ ] 14f. Update `App.tsx`: add `screenshotPath` state, listen to `EVENT_SCREENSHOT_COMPLETE`
+- [ ] 14g. Wire screenshot flow: when `mode === 'screenshot'` + button clicked → `invoke('take_screenshot')`; on event → show `<AnnotationCanvas>`
+- [ ] 14h. Add Cancel handler: clear `screenshotPath`, return to idle UI
+- [ ] 14i. Add annotation CSS in `App.css`: full-screen overlay, toolbar with buttons
+
+#### 3.5 Tests
+- [ ] 15a. Rust: unit test for temp path generation (unique, correct dir)
+- [ ] 15b. Rust: extend `FakeCaptureBackend` tests to cover `take_screenshot` → event emission
+- [ ] 15c. UI: create `AnnotationCanvas.test.tsx` with mocked canvas; test undo/clear/export callbacks
+- [ ] 15d. Update `setup.ts` mocks: add `take_screenshot` handler, `EVENT_SCREENSHOT_COMPLETE` listener
 
 **Done when**: user can take a region/window/screen screenshot and export an annotated PNG.
+
+**Manual verification:**
+1. `npm run tauri dev`
+2. Select "Screenshot" mode → "Take Screenshot"
+3. Portal picker → select region → annotation view appears
+4. Draw lines → Undo → Clear → Draw → Export → PNG downloads
 
 ### Milestone 4 — Recording MVP (no audio) (1–2 days)
 - [ ] 16. Create GStreamer recording pipeline (video only) from PipeWire:
