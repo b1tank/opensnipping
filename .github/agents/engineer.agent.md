@@ -13,6 +13,7 @@ Use [plan](../../opensnipping/plan.md) and [spec](../../opensnipping/spec.md) to
 - Test it (add unit tests where applicable) or ask human user to test it visually
 - Update spec or plan if needed
 - Always ask for commit or push, and only do it after approval
+- If unsure about an API or implementation detail, look up on web relevant frontend/backend libraries or crates (including low-level/native bindings) and cite the source and ask confirmation before proceeding
 
 ## Work Categories
 
