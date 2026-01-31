@@ -13,6 +13,15 @@ use state::{CaptureError, CaptureState, ErrorCode, StateMachine};
 use std::path::PathBuf;
 use tracing::info;
 
+/// Generate a unique temporary file path for screenshots.
+/// Returns a path in /tmp with format: opensnipping-{uuid}.png
+pub fn generate_screenshot_temp_path() -> PathBuf {
+    PathBuf::from(format!(
+        "/tmp/opensnipping-{}.png",
+        uuid::Uuid::new_v4()
+    ))
+}
+
 /// Application state managed by Tauri
 pub struct AppState {
     pub state_machine: Mutex<StateMachine>,
@@ -309,10 +318,7 @@ async fn take_screenshot(
     };
 
     // Generate unique output path
-    let output_path = PathBuf::from(format!(
-        "/tmp/opensnipping-{}.png",
-        uuid::Uuid::new_v4()
-    ));
+    let output_path = generate_screenshot_temp_path();
 
     info!("Capturing screenshot to {:?}...", output_path);
 
@@ -372,9 +378,57 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashSet;
 
     #[test]
     fn test_ping_returns_pong() {
         assert_eq!(ping(), "Pong from Rust!");
+    }
+
+    #[test]
+    fn test_screenshot_temp_path_is_in_tmp_dir() {
+        let path = generate_screenshot_temp_path();
+        assert!(
+            path.starts_with("/tmp"),
+            "Path should be in /tmp directory: {:?}",
+            path
+        );
+    }
+
+    #[test]
+    fn test_screenshot_temp_path_has_correct_prefix() {
+        let path = generate_screenshot_temp_path();
+        let filename = path.file_name().unwrap().to_str().unwrap();
+        assert!(
+            filename.starts_with("opensnipping-"),
+            "Filename should start with 'opensnipping-': {}",
+            filename
+        );
+    }
+
+    #[test]
+    fn test_screenshot_temp_path_has_png_extension() {
+        let path = generate_screenshot_temp_path();
+        assert_eq!(
+            path.extension().and_then(|e| e.to_str()),
+            Some("png"),
+            "Path should have .png extension: {:?}",
+            path
+        );
+    }
+
+    #[test]
+    fn test_screenshot_temp_path_is_unique() {
+        // Generate multiple paths and ensure they are all unique
+        let mut paths = HashSet::new();
+        for _ in 0..100 {
+            let path = generate_screenshot_temp_path();
+            assert!(
+                paths.insert(path.clone()),
+                "Generated path should be unique: {:?}",
+                path
+            );
+        }
+        assert_eq!(paths.len(), 100);
     }
 }
