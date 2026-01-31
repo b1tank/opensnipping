@@ -7,10 +7,12 @@ use crate::capture::{CaptureBackendError, ScreenshotResult, SelectionResult};
 use crate::config::{CaptureConfig, CaptureSource};
 use ashpd::desktop::screencast::{CursorMode, Screencast, SourceType};
 use ashpd::desktop::PersistMode;
+use gstreamer::prelude::*;
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 /// Linux capture backend using xdg-desktop-portal
 #[derive(Debug)]
@@ -165,13 +167,176 @@ impl super::CaptureBackend for LinuxCaptureBackend {
 
     async fn capture_screenshot(
         &self,
-        _selection: &SelectionResult,
-        _output_path: &Path,
+        selection: &SelectionResult,
+        output_path: &Path,
     ) -> Result<ScreenshotResult, CaptureBackendError> {
-        // TODO: Implement GStreamer pipeline in task 13e
-        Err(CaptureBackendError::NotSupported(
-            "Screenshot capture not yet implemented".to_string(),
-        ))
+        info!(
+            "Capturing screenshot from node {} to {:?}",
+            selection.node_id, output_path
+        );
+
+        // Initialize GStreamer (safe to call multiple times)
+        gstreamer::init().map_err(|e| {
+            CaptureBackendError::Internal(format!("Failed to initialize GStreamer: {}", e))
+        })?;
+
+        // Variables to capture frame dimensions
+        let width = Arc::new(AtomicU32::new(0));
+        let height = Arc::new(AtomicU32::new(0));
+        let got_frame = Arc::new(AtomicBool::new(false));
+
+        // Build the pipeline: pipewiresrc ! videoconvert ! pngenc ! filesink
+        let pipeline_str = format!(
+            "pipewiresrc path={} num-buffers=1 ! videoconvert ! pngenc ! filesink location={}",
+            selection.node_id,
+            output_path.display()
+        );
+
+        debug!("Creating GStreamer pipeline: {}", pipeline_str);
+
+        let pipeline = gstreamer::parse::launch(&pipeline_str)
+            .map_err(|e| CaptureBackendError::Internal(format!("Failed to create pipeline: {}", e)))?;
+
+        let pipeline = pipeline.downcast::<gstreamer::Pipeline>().map_err(|_| {
+            CaptureBackendError::Internal("Failed to downcast to Pipeline".to_string())
+        })?;
+
+        // Add a pad probe to capture frame dimensions from videoconvert's sink pad
+        let width_clone = Arc::clone(&width);
+        let height_clone = Arc::clone(&height);
+        let got_frame_clone = Arc::clone(&got_frame);
+
+        // Get the videoconvert element to add a probe
+        // We iterate over elements to find videoconvert
+        for element in pipeline.iterate_elements() {
+            if let Ok(elem) = element {
+                let factory = elem.factory();
+                if let Some(factory) = factory {
+                    if factory.name() == "videoconvert" {
+                        // Add probe to the sink pad
+                        if let Some(pad) = elem.static_pad("sink") {
+                            pad.add_probe(gstreamer::PadProbeType::BUFFER, move |_pad, info| {
+                                if got_frame_clone.load(Ordering::SeqCst) {
+                                    return gstreamer::PadProbeReturn::Ok;
+                                }
+
+                                // Try to get caps from the pad
+                                if let Some(caps) = _pad.current_caps() {
+                                    if let Some(s) = caps.structure(0) {
+                                        if let (Ok(w), Ok(h)) = (s.get::<i32>("width"), s.get::<i32>("height")) {
+                                            width_clone.store(w as u32, Ordering::SeqCst);
+                                            height_clone.store(h as u32, Ordering::SeqCst);
+                                            got_frame_clone.store(true, Ordering::SeqCst);
+                                            debug!("Captured frame dimensions: {}x{}", w, h);
+                                        }
+                                    }
+                                }
+
+                                // Also try from probe info buffer
+                                if let gstreamer::PadProbeInfo { data: Some(gstreamer::PadProbeData::Buffer(_)), .. } = info {
+                                    got_frame_clone.store(true, Ordering::SeqCst);
+                                }
+
+                                gstreamer::PadProbeReturn::Ok
+                            });
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Start the pipeline
+        pipeline.set_state(gstreamer::State::Playing).map_err(|e| {
+            CaptureBackendError::Internal(format!("Failed to start pipeline: {}", e))
+        })?;
+
+        // Wait for EOS or error
+        let bus = pipeline.bus().ok_or_else(|| {
+            CaptureBackendError::Internal("Failed to get pipeline bus".to_string())
+        })?;
+
+        let result = loop {
+            match bus.timed_pop(gstreamer::ClockTime::from_seconds(10)) {
+                Some(msg) => {
+                    use gstreamer::MessageView;
+                    match msg.view() {
+                        MessageView::Eos(..) => {
+                            debug!("Pipeline reached EOS");
+                            break Ok(());
+                        }
+                        MessageView::Error(err) => {
+                            let debug_info = err.debug().map(|d| format!(" ({:?})", d)).unwrap_or_default();
+                            error!(
+                                "Pipeline error: {}{}",
+                                err.error(),
+                                debug_info
+                            );
+                            break Err(CaptureBackendError::Internal(format!(
+                                "Pipeline error: {}{}",
+                                err.error(),
+                                debug_info
+                            )));
+                        }
+                        MessageView::StateChanged(state_changed) => {
+                            // Only log if from the pipeline itself
+                            if state_changed.src().map(|s| s == pipeline.upcast_ref::<gstreamer::Object>()).unwrap_or(false) {
+                                debug!(
+                                    "Pipeline state: {:?} -> {:?}",
+                                    state_changed.old(),
+                                    state_changed.current()
+                                );
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                None => {
+                    warn!("Pipeline timed out waiting for EOS");
+                    break Err(CaptureBackendError::Internal(
+                        "Pipeline timed out".to_string(),
+                    ));
+                }
+            }
+        };
+
+        // Cleanup: stop the pipeline
+        let _ = pipeline.set_state(gstreamer::State::Null);
+
+        // Check result
+        result?;
+
+        // Get final dimensions
+        let final_width = width.load(Ordering::SeqCst);
+        let final_height = height.load(Ordering::SeqCst);
+
+        // If we couldn't get dimensions from the probe, try from selection
+        let (final_width, final_height) = if final_width == 0 || final_height == 0 {
+            selection
+                .width
+                .zip(selection.height)
+                .unwrap_or((1920, 1080)) // fallback defaults
+        } else {
+            (final_width, final_height)
+        };
+
+        // Verify the output file was created
+        if !output_path.exists() {
+            return Err(CaptureBackendError::Internal(
+                "Screenshot file was not created".to_string(),
+            ));
+        }
+
+        info!(
+            "Screenshot captured: {}x{} at {:?}",
+            final_width, final_height, output_path
+        );
+
+        Ok(ScreenshotResult {
+            path: output_path.to_string_lossy().to_string(),
+            width: final_width,
+            height: final_height,
+        })
     }
 }
 
