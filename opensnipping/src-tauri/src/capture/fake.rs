@@ -3,7 +3,7 @@
 // This module provides a mock implementation of CaptureBackend
 // for use in tests without requiring actual portal/PipeWire integration.
 
-use crate::capture::{CaptureBackend, CaptureBackendError, ScreenshotResult, SelectionResult};
+use crate::capture::{CaptureBackend, CaptureBackendError, RecordingResult, ScreenshotResult, SelectionResult};
 use crate::config::CaptureConfig;
 use image::{ImageBuffer, Rgb};
 use std::path::Path;
@@ -166,6 +166,24 @@ impl CaptureBackend for FakeCaptureBackend {
             width,
             height,
         })
+    }
+
+    async fn start_recording(
+        &self,
+        _selection: &SelectionResult,
+        _config: &CaptureConfig,
+    ) -> Result<(), CaptureBackendError> {
+        // TODO: Implement in 16i
+        Err(CaptureBackendError::NotSupported(
+            "Recording not yet implemented in fake backend".to_string(),
+        ))
+    }
+
+    async fn stop_recording(&self) -> Result<RecordingResult, CaptureBackendError> {
+        // TODO: Implement in 16i
+        Err(CaptureBackendError::NotSupported(
+            "Recording not yet implemented in fake backend".to_string(),
+        ))
     }
 }
 

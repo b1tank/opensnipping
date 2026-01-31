@@ -234,9 +234,23 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
 4. Draw lines → Undo → Clear → Draw → Export → PNG downloads
 
 ### Milestone 4 — Recording MVP (no audio) (1–2 days)
-- [ ] 16. Create GStreamer recording pipeline (video only) from PipeWire:
-   - source → colorspace/scale → encoder (hw if available else x264) → mux (mp4/mkv) → filesink
+
+#### 4.1 Recording Pipeline Setup
+- [x] 16a. Add `RecordingResult` struct and extend `CaptureBackend` trait with `start_recording`/`stop_recording` methods
+- [ ] 16b. Add recording events (`RECORDING_STARTED`, `RECORDING_STOPPED`) in Rust + TS types
+- [ ] 16c. Add encoder detection utility (vaapih264enc/nvh264enc/x264enc)
+- [ ] 16d. Add muxer selection utility (mp4mux/matroskamux)
+- [ ] 16e. Create `RecordingPipeline` struct with lifecycle management (new/start/stop)
+- [ ] 16f. Implement `start_recording` in `LinuxCaptureBackend`
+- [ ] 16g. Implement `stop_recording` in `LinuxCaptureBackend`
+- [ ] 16h. Add `start_recording_video` and `stop_recording_video` Tauri commands
+- [ ] 16i. Update `FakeCaptureBackend` and TS test mocks for recording
+- [ ] 16j. Add unit tests for encoder/muxer selection
+
+#### 4.2 Start/Stop End-to-End
 - [ ] 17. Implement Start/Stop end-to-end, producing playable files.
+
+#### 4.3 Pause/Resume
 - [ ] 18. Implement Pause/Resume:
    - simplest: pause the pipeline / block dataflow (verify output correctness)
    - fallback if pause is hard: implement “segmented recording” and concat (only if necessary)

@@ -3,7 +3,7 @@
 // This module integrates with the Freedesktop portal for screen capture
 // on Linux (Wayland and X11).
 
-use crate::capture::{CaptureBackendError, ScreenshotResult, SelectionResult};
+use crate::capture::{CaptureBackendError, RecordingResult, ScreenshotResult, SelectionResult};
 use crate::config::{CaptureConfig, CaptureSource};
 use ashpd::desktop::screencast::{CursorMode, Screencast, SourceType};
 use ashpd::desktop::PersistMode;
@@ -337,6 +337,24 @@ impl super::CaptureBackend for LinuxCaptureBackend {
             width: final_width,
             height: final_height,
         })
+    }
+
+    async fn start_recording(
+        &self,
+        _selection: &SelectionResult,
+        _config: &CaptureConfig,
+    ) -> Result<(), CaptureBackendError> {
+        // TODO: Implement in 16f
+        Err(CaptureBackendError::NotSupported(
+            "Recording not yet implemented".to_string(),
+        ))
+    }
+
+    async fn stop_recording(&self) -> Result<RecordingResult, CaptureBackendError> {
+        // TODO: Implement in 16g
+        Err(CaptureBackendError::NotSupported(
+            "Recording not yet implemented".to_string(),
+        ))
     }
 }
 

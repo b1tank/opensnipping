@@ -38,6 +38,19 @@ pub struct ScreenshotResult {
     pub height: u32,
 }
 
+/// Result of a completed recording
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecordingResult {
+    /// Path to the saved recording file
+    pub path: String,
+    /// Duration of the recording in milliseconds
+    pub duration_ms: u64,
+    /// Width of the recording in pixels
+    pub width: u32,
+    /// Height of the recording in pixels
+    pub height: u32,
+}
+
 /// Errors that can occur during capture operations
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum CaptureBackendError {
@@ -93,6 +106,23 @@ pub trait CaptureBackend: Send + Sync {
         selection: &SelectionResult,
         output_path: &Path,
     ) -> impl std::future::Future<Output = Result<ScreenshotResult, CaptureBackendError>> + Send;
+
+    /// Start recording video from the given selection
+    ///
+    /// Creates and starts a GStreamer pipeline for recording.
+    /// The recording continues until stop_recording is called.
+    fn start_recording(
+        &self,
+        selection: &SelectionResult,
+        config: &CaptureConfig,
+    ) -> impl std::future::Future<Output = Result<(), CaptureBackendError>> + Send;
+
+    /// Stop the current recording and finalize the output file
+    ///
+    /// Sends EOS to the pipeline, waits for finalization, and returns the result.
+    fn stop_recording(
+        &self,
+    ) -> impl std::future::Future<Output = Result<RecordingResult, CaptureBackendError>> + Send;
 }
 
 /// Get the appropriate capture backend for the current platform
@@ -134,6 +164,22 @@ impl CaptureBackend for StubBackend {
     ) -> Result<ScreenshotResult, CaptureBackendError> {
         Err(CaptureBackendError::NotSupported(
             "Screenshot not implemented for this platform".to_string(),
+        ))
+    }
+
+    async fn start_recording(
+        &self,
+        _selection: &SelectionResult,
+        _config: &CaptureConfig,
+    ) -> Result<(), CaptureBackendError> {
+        Err(CaptureBackendError::NotSupported(
+            "Recording not implemented for this platform".to_string(),
+        ))
+    }
+
+    async fn stop_recording(&self) -> Result<RecordingResult, CaptureBackendError> {
+        Err(CaptureBackendError::NotSupported(
+            "Recording not implemented for this platform".to_string(),
         ))
     }
 }
