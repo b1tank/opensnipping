@@ -230,10 +230,11 @@ impl std::fmt::Debug for RecordingPipeline {
 }
 
 /// Linux capture backend using xdg-desktop-portal
-#[derive(Debug)]
 pub struct LinuxCaptureBackend {
     /// Active screencast session (if any)
     session: Arc<Mutex<Option<ActiveSession>>>,
+    /// Active recording pipeline (if recording)
+    recording: Arc<Mutex<Option<RecordingPipeline>>>,
 }
 
 /// Holds an active screencast session
@@ -249,6 +250,7 @@ impl LinuxCaptureBackend {
     pub fn new() -> Self {
         Self {
             session: Arc::new(Mutex::new(None)),
+            recording: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -261,6 +263,15 @@ impl LinuxCaptureBackend {
             // Region selection is handled via Monitor + UI crop
             CaptureSource::Region => SourceType::Monitor,
         }
+    }
+}
+
+impl std::fmt::Debug for LinuxCaptureBackend {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LinuxCaptureBackend")
+            .field("session", &"<session>")
+            .field("recording", &"<recording>")
+            .finish()
     }
 }
 
@@ -556,13 +567,41 @@ impl super::CaptureBackend for LinuxCaptureBackend {
 
     async fn start_recording(
         &self,
-        _selection: &SelectionResult,
-        _config: &CaptureConfig,
+        selection: &SelectionResult,
+        config: &CaptureConfig,
     ) -> Result<(), CaptureBackendError> {
-        // TODO: Implement in 16f
-        Err(CaptureBackendError::NotSupported(
-            "Recording not yet implemented".to_string(),
-        ))
+        info!("Starting recording from node {}", selection.node_id);
+
+        // Check if already recording
+        {
+            let recording_lock = self.recording.lock().await;
+            if recording_lock.is_some() {
+                return Err(CaptureBackendError::Internal(
+                    "Recording already in progress".to_string(),
+                ));
+            }
+        }
+
+        // Create recording pipeline
+        let output_path = std::path::PathBuf::from(&config.output_path);
+        let mut pipeline = RecordingPipeline::new(
+            selection.node_id,
+            output_path,
+            config.fps,
+            config.container,
+            selection.width,
+            selection.height,
+        )?;
+
+        // Start the pipeline
+        pipeline.start()?;
+
+        // Store the pipeline
+        let mut recording_lock = self.recording.lock().await;
+        *recording_lock = Some(pipeline);
+
+        info!("Recording started successfully");
+        Ok(())
     }
 
     async fn stop_recording(&self) -> Result<RecordingResult, CaptureBackendError> {

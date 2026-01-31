@@ -241,7 +241,7 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
 - [x] 16c. Add encoder detection utility (vaapih264enc/nvh264enc/x264enc)
 - [x] 16d. Add muxer selection utility (mp4mux/matroskamux)
 - [x] 16e. Create `RecordingPipeline` struct with lifecycle management (new/start/stop)
-- [ ] 16f. Implement `start_recording` in `LinuxCaptureBackend`
+- [x] 16f. Implement `start_recording` in `LinuxCaptureBackend`
 - [ ] 16g. Implement `stop_recording` in `LinuxCaptureBackend`
 - [ ] 16h. Add `start_recording_video` and `stop_recording_video` Tauri commands
 - [ ] 16i. Update `FakeCaptureBackend` and TS test mocks for recording
