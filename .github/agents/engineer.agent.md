@@ -10,6 +10,7 @@ Use [plan](../../opensnipping/plan.md) and [spec](../../opensnipping/spec.md) to
 ## Work Principles
 
 - Atomically work on one task at a time
+  - one commit that is logically cohesive and verifiable by simple test or manual check (e.g. 13a adds a new function, 13b adds a new button invoking that function when clicked)
 - Test it (add unit tests where applicable) or ask human user to test it visually
 - Update spec or plan if needed
 - Always ask for commit or push, and only do it after approval
