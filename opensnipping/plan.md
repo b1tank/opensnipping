@@ -198,8 +198,8 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
 #### 3.1 Backend: Dependencies & Contract
 - [x] 13a. Add Rust dependencies to `Cargo.toml`: `gstreamer = "0.23"`, `gstreamer-app = "0.23"`, `gstreamer-video = "0.23"`, `uuid = { version = "1", features = ["v4"] }`
 - [x] 13b. Extend `CaptureBackend` trait in `capture/mod.rs`: add `capture_screenshot(&self, selection: &SelectionResult, output_path: &Path) -> Result<ScreenshotResult, CaptureBackendError>` with `ScreenshotResult { path, width, height }`
-- [ ] 13c. Add `ScreenshotCompleteEvent` in `events.rs`: `capture:screenshot_complete` with `{ path, width, height }`
-- [ ] 13d. Add matching TS types in `types.ts`: `EVENT_SCREENSHOT_COMPLETE`, `ScreenshotCompleteEvent`
+- [x] 13c. Add `ScreenshotCompleteEvent` in `events.rs`: `capture:screenshot_complete` with `{ path, width, height }`
+- [x] 13d. Add matching TS types in `types.ts`: `EVENT_SCREENSHOT_COMPLETE`, `ScreenshotCompleteEvent`
 
 #### 3.2 Backend: Linux Implementation
 - [ ] 13e. Implement `capture_screenshot` in `capture/linux.rs`: build GStreamer pipeline `pipewiresrc path={node_id} ! videoconvert ! pngenc ! filesink location={output_path}`, run to EOS, cleanup
