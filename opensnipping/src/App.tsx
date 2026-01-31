@@ -6,8 +6,10 @@ import {
   CaptureState,
   StateChangedEvent,
   ErrorEvent,
+  SelectionCompleteEvent,
   EVENT_STATE_CHANGED,
   EVENT_ERROR,
+  EVENT_SELECTION_COMPLETE,
 } from "./types";
 
 type AppMode = "screenshot" | "record";
@@ -33,6 +35,11 @@ function App() {
     // Listen for errors
     listen<ErrorEvent>(EVENT_ERROR, (event) => {
       setError(event.payload.error.message);
+    }).then((unlisten) => unlisteners.push(unlisten));
+
+    // Listen for selection complete (for logging/debugging)
+    listen<SelectionCompleteEvent>(EVENT_SELECTION_COMPLETE, (event) => {
+      console.log("Selection complete:", event.payload.selection);
     }).then((unlisten) => unlisteners.push(unlisten));
 
     // Fetch initial state
@@ -64,22 +71,6 @@ function App() {
           output_path: "/tmp/recording.mp4",
         },
       });
-    } catch (e) {
-      setError(String(e));
-    }
-  }
-
-  async function handleCancelCapture() {
-    try {
-      await invoke("cancel_capture");
-    } catch (e) {
-      setError(String(e));
-    }
-  }
-
-  async function handleBeginRecording() {
-    try {
-      await invoke("begin_recording");
     } catch (e) {
       setError(String(e));
     }
@@ -166,14 +157,7 @@ function App() {
           </button>
         )}
         {captureState === "selecting" && (
-          <>
-            <button onClick={handleBeginRecording} className="btn btn-primary">
-              Begin Recording
-            </button>
-            <button onClick={handleCancelCapture} className="btn">
-              Cancel
-            </button>
-          </>
+          <p className="status-text">Select a screen/window in the picker...</p>
         )}
         {captureState === "recording" && (
           <>

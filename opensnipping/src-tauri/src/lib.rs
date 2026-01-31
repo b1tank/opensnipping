@@ -1,3 +1,4 @@
+pub mod capture;
 pub mod config;
 pub mod events;
 pub mod state;
@@ -5,14 +6,18 @@ pub mod state;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter};
 
+use capture::{CaptureBackend, CaptureBackendError, SelectionResult};
 use config::CaptureConfig;
-use events::{event_names, ErrorEvent, StateChangedEvent};
+use events::{event_names, ErrorEvent, SelectionCompleteEvent, StateChangedEvent};
 use state::{CaptureError, CaptureState, ErrorCode, StateMachine};
+use tracing::info;
 
 /// Application state managed by Tauri
 pub struct AppState {
     pub state_machine: Mutex<StateMachine>,
     pub config: Mutex<Option<CaptureConfig>>,
+    /// Result from portal selection (PipeWire node info)
+    pub selection: Mutex<Option<SelectionResult>>,
 }
 
 impl Default for AppState {
@@ -20,6 +25,7 @@ impl Default for AppState {
         Self {
             state_machine: Mutex::new(StateMachine::new()),
             config: Mutex::new(None),
+            selection: Mutex::new(None),
         }
     }
 }
@@ -55,10 +61,36 @@ fn get_state(state: tauri::State<AppState>) -> CaptureState {
     state.state_machine.lock().unwrap().state()
 }
 
+/// Convert capture backend error to CaptureError
+fn backend_error_to_capture_error(err: &CaptureBackendError) -> CaptureError {
+    match err {
+        CaptureBackendError::PermissionDenied(msg) => CaptureError {
+            code: ErrorCode::PermissionDenied,
+            message: msg.clone(),
+        },
+        CaptureBackendError::PortalError(msg) => CaptureError {
+            code: ErrorCode::PortalError,
+            message: msg.clone(),
+        },
+        CaptureBackendError::NoSourceAvailable(msg) => CaptureError {
+            code: ErrorCode::PortalError,
+            message: msg.clone(),
+        },
+        CaptureBackendError::NotSupported(msg) => CaptureError {
+            code: ErrorCode::Unknown,
+            message: msg.clone(),
+        },
+        CaptureBackendError::Internal(msg) => CaptureError {
+            code: ErrorCode::Unknown,
+            message: msg.clone(),
+        },
+    }
+}
+
 #[tauri::command]
-fn start_capture(
+async fn start_capture(
     app: AppHandle,
-    state: tauri::State<AppState>,
+    state: tauri::State<'_, AppState>,
     config: CaptureConfig,
 ) -> Result<CaptureState, String> {
     // Validate config
@@ -74,17 +106,70 @@ fn start_capture(
     }
 
     // Store config
-    *state.config.lock().unwrap() = Some(config);
+    let stored_config = config.clone();
+    *state.config.lock().unwrap() = Some(stored_config);
 
     // Transition to Selecting
-    let mut sm = state.state_machine.lock().unwrap();
-    let previous = sm.state();
-    match sm.start_selecting() {
-        Ok(new_state) => {
-            emit_state_change(&app, previous, new_state);
-            Ok(new_state)
+    let _selecting_state = {
+        let mut sm = state.state_machine.lock().unwrap();
+        let previous = sm.state();
+        match sm.start_selecting() {
+            Ok(new_state) => {
+                emit_state_change(&app, previous, new_state);
+                new_state
+            }
+            Err(e) => return Err(e.message),
         }
-        Err(e) => Err(e.message),
+    };
+
+    info!("Starting portal selection...");
+
+    // Now call the portal (this shows the picker dialog)
+    let backend = capture::get_backend();
+    let selection_result = backend.request_selection(&config).await;
+
+    match selection_result {
+        Ok(selection) => {
+            info!(
+                "Portal selection successful: node_id={}",
+                selection.node_id
+            );
+
+            // Store selection result
+            *state.selection.lock().unwrap() = Some(selection.clone());
+
+            // Emit selection complete event
+            let _ = app.emit(
+                event_names::SELECTION_COMPLETE,
+                SelectionCompleteEvent { selection },
+            );
+
+            // Transition to Recording
+            let mut sm = state.state_machine.lock().unwrap();
+            let previous = sm.state();
+            match sm.begin_recording() {
+                Ok(new_state) => {
+                    emit_state_change(&app, previous, new_state);
+                    Ok(new_state)
+                }
+                Err(e) => Err(e.message),
+            }
+        }
+        Err(backend_err) => {
+            info!("Portal selection failed: {:?}", backend_err);
+
+            let error = backend_error_to_capture_error(&backend_err);
+
+            // Transition to Error
+            let mut sm = state.state_machine.lock().unwrap();
+            sm.set_error(error.clone());
+            emit_error(&app, &error);
+
+            // Clear config since we failed
+            *state.config.lock().unwrap() = None;
+
+            Err(error.message)
+        }
     }
 }
 
@@ -96,6 +181,7 @@ fn cancel_capture(app: AppHandle, state: tauri::State<AppState>) -> Result<Captu
         Ok(new_state) => {
             emit_state_change(&app, previous, new_state);
             *state.config.lock().unwrap() = None;
+            *state.selection.lock().unwrap() = None;
             Ok(new_state)
         }
         Err(e) => Err(e.message),
@@ -162,6 +248,7 @@ fn finalize_complete(app: AppHandle, state: tauri::State<AppState>) -> Result<Ca
         Ok(new_state) => {
             emit_state_change(&app, previous, new_state);
             *state.config.lock().unwrap() = None;
+            *state.selection.lock().unwrap() = None;
             Ok(new_state)
         }
         Err(e) => Err(e.message),

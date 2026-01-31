@@ -176,12 +176,12 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
 **Done when**: UI displays state changes; `cargo test` covers state transitions.
 
 ### Milestone 2 — Linux Permissions + Portal Selection (half day)
-- [ ] 9. Add Linux-only portal integration (`ashpd`):
+- [x] 9. Add Linux-only portal integration (`ashpd`):
    - request screencast session
    - source selection (screen/window/region)
-- [ ] 10. Return a “selection token / PipeWire node id” to Rust capture backend.
-- [ ] 11. UI: keep selection UX minimal; prefer the portal picker.
-- [ ] 12. Add tests:
+- [x] 10. Return a "selection token / PipeWire node id" to Rust capture backend.
+- [x] 11. UI: keep selection UX minimal; prefer the portal picker.
+- [x] 12. Add tests:
    - contract test using a FakeCaptureBackend to ensure “Start → Selecting → Recording” event flow works
    - (optional) Linux-only integration test that is skipped unless `XDG_CURRENT_DESKTOP` and portal are present
 

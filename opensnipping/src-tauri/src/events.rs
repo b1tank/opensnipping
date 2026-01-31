@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::state::{CaptureState, CaptureError};
+use crate::capture::SelectionResult;
 
 /// Event emitted when capture state changes
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,10 +35,17 @@ pub struct ErrorEvent {
     pub error: CaptureError,
 }
 
+/// Event emitted when portal selection completes successfully
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SelectionCompleteEvent {
+    pub selection: SelectionResult,
+}
+
 /// Event names for Tauri event system
 pub mod event_names {
     pub const STATE_CHANGED: &str = "capture:state_changed";
     pub const PERMISSION_NEEDED: &str = "capture:permission_needed";
     pub const PROGRESS: &str = "capture:progress";
     pub const ERROR: &str = "capture:error";
+    pub const SELECTION_COMPLETE: &str = "capture:selection_complete";
 }

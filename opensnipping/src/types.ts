@@ -57,8 +57,21 @@ export interface ErrorEvent {
   error: CaptureError;
 }
 
+// Selection result from portal
+export interface SelectionResult {
+  node_id: number;
+  stream_fd: number | null;
+  width: number | null;
+  height: number | null;
+}
+
+export interface SelectionCompleteEvent {
+  selection: SelectionResult;
+}
+
 // Event names
 export const EVENT_STATE_CHANGED = "capture:state_changed";
 export const EVENT_PERMISSION_NEEDED = "capture:permission_needed";
 export const EVENT_PROGRESS = "capture:progress";
 export const EVENT_ERROR = "capture:error";
+export const EVENT_SELECTION_COMPLETE = "capture:selection_complete";

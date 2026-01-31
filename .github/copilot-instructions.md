@@ -112,6 +112,8 @@ Rust:
 
 **Deterministic tests over "real device" tests:** Add/adjust unit tests around the Rust domain logic and Vitest UI mocks; avoid tests that require a running Tauri window unless absolutely necessary.
 
+**Manual verification guidance:** When asking for or running visual verification, always print the manual verification steps before running any server/startup command (e.g., `npm run tauri dev`) so the user can follow along.
+
 ## Guardrails / Hygiene
 
 - Keep changes scoped and “atomic”: one feature slice per PR/change.
