@@ -1,6 +1,26 @@
 {
     "chat.tools.terminal.autoApprove": {
         "git add": true,
-        "git commit": true
+        "git commit": true,
+        "git push": true,
+        "git status": true,
+        "git diff": true,
+        "git log": true,
+        "npm test": true,
+        "npm run build": true,
+        "npm run dev": true,
+        "npm run tauri dev": true,
+        "npm install": true,
+        "cargo test": true,
+        "cargo check": true,
+        "cargo build": true,
+        "cargo clippy": true,
+        "ls": true,
+        "cat": true,
+        "find": true,
+        "grep": true,
+        "head": true,
+        "tail": true,
+        "wc": true
     }
 }
