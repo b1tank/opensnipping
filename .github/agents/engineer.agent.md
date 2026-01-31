@@ -14,6 +14,7 @@ Use [plan](../../opensnipping/plan.md) and [spec](../../opensnipping/spec.md) to
 - Update spec or plan if needed
 - Always ask for commit or push, and only do it after approval
 - If unsure about an API or implementation detail, look up on web relevant frontend/backend libraries or crates (including low-level/native bindings) and cite the source and ask confirmation before proceeding
+- When a URL is provided, attempt to fetch and review it before acting on assumptions; summarize relevant findings
 
 ## Work Categories
 
