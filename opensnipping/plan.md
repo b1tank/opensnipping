@@ -148,129 +148,129 @@ UI only understands “needs_permission: screen” — not “portal failed with
 Each step should end with a **demoable artifact** (a visible behavior or an output file).
 
 ### Milestone 0 — “Hello App” + Test Harness (fastest first) (30–90 minutes)
-1. Scaffold Tauri v2 app (Vite + React + TS) and make `npm run dev` open a desktop window.
-2. Add a minimal “Hello” view plus two buttons: “Ping Rust” and “Toggle Mode”.
-3. Wire a single Tauri command (Rust) that returns a string and show it in the UI.
-4. Add test harnesses:
+- [x] 1. Scaffold Tauri v2 app (Vite + React + TS) and make `npm run dev` open a desktop window.
+- [x] 2. Add a minimal “Hello” view plus two buttons: “Ping Rust” and “Toggle Mode”.
+- [x] 3. Wire a single Tauri command (Rust) that returns a string and show it in the UI.
+- [x] 4. Add test harnesses:
    - UI: Vitest + React Testing Library, one smoke test that renders the app and clicks “Toggle Mode”.
    - Rust: `cargo test` running one trivial unit test.
 
 **Done when**: app opens and is clickable; `npm test` and `cargo test` both pass.
 
 ### Milestone 1 — Contract + State Machine (half day)
-5. Define `CaptureConfig` (serde) aligned with spec:
+- [x] 5. Define `CaptureConfig` (serde) aligned with spec:
    - source: screen|monitor|window|region
    - fps, include_cursor
    - audio: mic/system toggles
    - container: mp4|mkv
    - output path
-6. Implement orchestration state machine (Rust):
+- [x] 6. Implement orchestration state machine (Rust):
    - states: `Idle`, `Selecting`, `Recording`, `Paused`, `Finalizing`, `Error`
    - validate transitions (e.g., pause only from Recording)
-7. Implement event bus from Rust → UI (Tauri events):
+- [x] 7. Implement event bus from Rust → UI (Tauri events):
    - status changes, errors
-8. Add tests:
+- [x] 8. Add tests:
    - state transition tests (valid/invalid)
    - config validation tests (bad inputs rejected)
 
 **Done when**: UI displays state changes; `cargo test` covers state transitions.
 
 ### Milestone 2 — Linux Permissions + Portal Selection (half day)
-9. Add Linux-only portal integration (`ashpd`):
+- [ ] 9. Add Linux-only portal integration (`ashpd`):
    - request screencast session
    - source selection (screen/window/region)
-10. Return a “selection token / PipeWire node id” to Rust capture backend.
-11. UI: keep selection UX minimal; prefer the portal picker.
-12. Add tests:
+- [ ] 10. Return a “selection token / PipeWire node id” to Rust capture backend.
+- [ ] 11. UI: keep selection UX minimal; prefer the portal picker.
+- [ ] 12. Add tests:
    - contract test using a FakeCaptureBackend to ensure “Start → Selecting → Recording” event flow works
    - (optional) Linux-only integration test that is skipped unless `XDG_CURRENT_DESKTOP` and portal are present
 
 **Done when**: clicking “Start” shows the GNOME portal picker and returns a usable stream descriptor (logged).
 
 ### Milestone 3 — Screenshot MVP (1 day)
-13. Build Linux screenshot pipeline:
+- [ ] 13. Build Linux screenshot pipeline:
    - connect to PipeWire stream
    - grab a single frame
    - write PNG to disk (`image` crate) OR via GStreamer `pngenc`
-14. UI: after screenshot captured, show annotation screen:
+- [ ] 14. UI: after screenshot captured, show annotation screen:
    - single pen color
    - fixed stroke width
    - undo/clear
    - export (overwrite/copy)
-15. Add tests:
+- [ ] 15. Add tests:
    - UI: annotation component tests (draw action mocked; undo/clear actions)
    - Rust: unit test for filename/path generation and “screenshot completed” event emission
 
 **Done when**: user can take a region/window/screen screenshot and export an annotated PNG.
 
 ### Milestone 4 — Recording MVP (no audio) (1–2 days)
-16. Create GStreamer recording pipeline (video only) from PipeWire:
+- [ ] 16. Create GStreamer recording pipeline (video only) from PipeWire:
    - source → colorspace/scale → encoder (hw if available else x264) → mux (mp4/mkv) → filesink
-17. Implement Start/Stop end-to-end, producing playable files.
-18. Implement Pause/Resume:
+- [ ] 17. Implement Start/Stop end-to-end, producing playable files.
+- [ ] 18. Implement Pause/Resume:
    - simplest: pause the pipeline / block dataflow (verify output correctness)
    - fallback if pause is hard: implement “segmented recording” and concat (only if necessary)
-19. Add tests:
+- [ ] 19. Add tests:
    - Rust: backend selection logic chooses expected encoder/mux given availability flags
    - Linux smoke test: start/stop a 2–3s recording and assert output file exists and is non-empty (skip if deps missing)
 
 **Done when**: user can record screen/window/region to MP4/MKV with pause/resume.
 
 ### Milestone 5 — Add Audio (system + mic) + Sync (2–4 days)
-20. Add microphone audio source and encode (AAC/Opus depending on container):
+- [ ] 20. Add microphone audio source and encode (AAC/Opus depending on container):
    - MP4: AAC recommended
    - MKV: Opus acceptable
-21. Add system audio capture:
+- [ ] 21. Add system audio capture:
    - prefer: portal-provided audio with the screencast session if available
    - fallback: PulseAudio monitor source (X11 / non-portal environments)
-22. Mix mic + system (if both enabled).
-23. Verify A/V sync over a 10–20 minute recording.
-24. Add tests:
+- [ ] 22. Mix mic + system (if both enabled).
+- [ ] 23. Verify A/V sync over a 10–20 minute recording.
+- [ ] 24. Add tests:
    - Rust: config matrix tests (mic only / system only / both)
    - Linux smoke test: short recording with audio enabled produces a playable file
 
 **Done when**: recordings include mic + system audio with stable sync.
 
 ### Milestone 6 — Cursor Correctness + HiDPI (1–2 days)
-25. Verify cursor visibility, shape, and scaling in recordings.
-26. If needed, implement cursor overlay:
+- [ ] 25. Verify cursor visibility, shape, and scaling in recordings.
+- [ ] 26. If needed, implement cursor overlay:
    - read cursor metadata + composite into frames (only if portal stream lacks correct cursor)
-27. Add tests:
+- [ ] 27. Add tests:
    - Rust: cursor config toggle tests
    - Manual test checklist: record on HiDPI/fractional scaling and verify cursor behavior
 
 **Done when**: cursor looks correct on HiDPI/fractional scaling setups.
 
 ### Milestone 7 — UX Polish: Ephemeral UI, Indicator, Hotkeys (1–2 days)
-28. Implement minimal floating control window:
+- [ ] 28. Implement minimal floating control window:
    - always-on-top
    - tiny footprint
    - hides when idle
-29. Add recording indicator (red dot / timer).
-30. Add global hotkeys:
+- [ ] 29. Add recording indicator (red dot / timer).
+- [ ] 30. Add global hotkeys:
    - Start/Stop
    - Pause/Resume
    - Screenshot
-31. Add error UX:
+- [ ] 31. Add error UX:
    - permission needed
    - portal denied
    - encoder unavailable
-32. Add tests:
+- [ ] 32. Add tests:
    - UI: indicator + timer rendering tests
    - Rust: hotkey command wiring tested via unit tests around command handlers (logic, not OS key registration)
 
 **Done when**: full spec control flow works without a “settings app” feel.
 
-### Milestone 8 — Reliability + Packaging (2–5 days)
-33. Recovery & cleanup:
+### Milestone 8 — Reliability + Linux Packaging (2–5 days)
+- [ ] 33. Recovery & cleanup:
    - crash-safe finalization
    - temp files
    - handle portal session invalidation
-34. Add basic telemetry logs (local only): per-recording pipeline summary.
-35. Add CI to prevent regressions:
+- [ ] 34. Add basic telemetry logs (local only): per-recording pipeline summary.
+- [ ] 35. Add CI to prevent regressions:
    - run UI tests (`npm test`) and Rust tests (`cargo test`) on every push
    - (optional) Linux integration tests behind a separate job and/or feature flag
-36. Packaging:
+- [ ] 36. Packaging:
    - `deb` + AppImage
    - document dependencies (GStreamer plugins)
 
@@ -284,6 +284,18 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
 2. Implement `CaptureBackend` for each OS.
 3. Match config & events contract; do not leak OS-specific permission UI.
 4. Ensure encoding happens inside native backend for performance.
+5. Cross-platform distribution (GitHub Releases):
+   - Add GitHub Actions build matrix (Linux/Windows/macOS) with Tauri bundling.
+   - Use `tauri-action` (or equivalent) to produce native installers:
+     - Windows: `.msi` (and/or `.exe`)
+     - macOS: `.dmg` (and/or `.app` zip)
+     - Linux: `deb` + AppImage
+   - Configure release workflow to attach artifacts to GitHub Releases (tagged builds).
+   - Add code signing placeholders and documentation:
+     - Windows: Authenticode cert (optional for MVP)
+     - macOS: Apple Developer ID + notarization (optional for MVP)
+   - Add a release checklist in README (manual steps if signing is skipped).
+   - Done when: a tagged release produces installers for all 3 OSes and publishes them to GitHub Releases.
 
 ---
 
