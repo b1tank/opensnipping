@@ -178,6 +178,8 @@ Keep the description lowercase, imperative, and under 50 characters.
 
 Always include a brief rationale in the commit workflow (e.g., "Tests pass; new `capture_screenshot` method is interface-only, no callers yet").
 
+**Pre-commit checks via subagent:** Before committing, run the pre-commit agent using the `runSubagent` tool and address any findings (lint, tests, plan.md checkbox status, cleanup).
+
 **Human verification decision flow:**
 - If you can verify correctness yourself (tests pass, contract-only, logic is deterministic) → commit and push
 - If the change requires visual/UX verification you cannot perform → ask human first with verification steps, then commit after confirmation
@@ -195,6 +197,7 @@ See `.github/agents/engineer.agent.md` for detailed delegation protocols and pro
 ## Agent Notes
 
 There is an agent entrypoint at `.github/agents/engineer.agent.md` that points to the spec/plan and requests atomic steps + tests.
+There is also a pre-commit agent at `.github/agents/pre-commit.agent.md` that should be invoked via `runsubagent` before committing.
 
 When uncertain:
 - Read `opensnipping/spec.md` and `opensnipping/plan.md` first.

@@ -104,6 +104,10 @@ I can start the dev server now, or commit directly if you prefer.
 
 See **Commit quality evidence** and **Human verification decision flow** in [copilot-instructions.md](../copilot-instructions.md#commit-and-push-policy) for details.
 
+## Pre-Commit Subagent (invoke using runSubagent tool)
+
+Before committing, delegate routine cleanup/checks to the pre-commit agent using the `runSubagent` tool.
+
 ## Terminal Command Auto-Approval
 
 When a safe, read-only or routine command requires approval and you believe it should be auto-approved, suggest the user add it to `.vscode/settings.json`:
