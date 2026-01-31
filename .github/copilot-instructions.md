@@ -132,15 +132,15 @@ Rust:
 
 All work falls into: **feat**, **fix**, **docs**, **refactor**, **test**, **chore**, **agent**. Classify before starting to maintain atomic commits.
 
-| Category   | Description                                      |
-|------------|--------------------------------------------------|
-| `feat`     | New feature or capability                        |
-| `fix`      | Bug fix                                          |
-| `docs`     | Documentation only                               |
-| `refactor` | Code restructure without behavior change         |
-| `test`     | Adding or updating tests                         |
-| `chore`    | Build, CI, config, or maintenance tasks          |
-| `agent`    | Improving agent instructions or prompts          |
+| Category   | Description                                      | Typical Risk |
+|------------|--------------------------------------------------|---------------|
+| `feat`     | New feature or capability                        | High |
+| `fix`      | Bug fix                                          | Medium-High |
+| `docs`     | Documentation only                               | Low |
+| `refactor` | Code restructure without behavior change         | Medium |
+| `test`     | Adding or updating tests                         | Low-Medium |
+| `chore`    | Build, CI, config, or maintenance tasks          | Low |
+| `agent`    | Improving agent instructions or prompts          | Low |
 
 ## Commit Message Guide
 

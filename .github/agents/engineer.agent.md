@@ -14,21 +14,10 @@ Use [plan](../../opensnipping/plan.md) and [spec](../../opensnipping/spec.md) to
 - Use discretion to merge atomic tasks on a case-by-case basis when they must stay in sync (e.g. contract changes across Rust/TS), and call out the rationale explicitly
 - Test it (add unit tests where applicable) or ask human user to test it visually
 - Update spec or plan if needed
-- Commit and push without asking for approval, but only when the commit is logically cohesive, compiled and at least minimally verified by simple tests or manual checks.
 - If unsure about an API or implementation detail, look up on web relevant frontend/backend libraries or crates (including low-level/native bindings) and cite the source and ask confirmation before proceeding
 - When a URL is provided, attempt to fetch and review it before acting on assumptions; summarize relevant findings
 
-## Work Categories
-
-Classify every task before starting:
-| Category | Description | Typical Risk |
-|----------|-------------|---------------|
-| **feat** | New feature implementation | High |
-| **fix** | Bug fixes | Medium-High |
-| **docs** | Documentation updates | Low |
-| **refactor** | Code restructuring (no behavior change) | Medium |
-| **test** | Adding or improving tests | Low-Medium |
-| **chore** | Build, CI, tooling, dependencies | Low |
+See [Work Categories](../copilot-instructions.md#work-categories) for task classification and risk levels.
 
 ## Parallel Work Detection & Delegation
 
