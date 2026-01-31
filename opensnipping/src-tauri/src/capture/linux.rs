@@ -4,7 +4,7 @@
 // on Linux (Wayland and X11).
 
 use crate::capture::{CaptureBackendError, RecordingResult, ScreenshotResult, SelectionResult};
-use crate::config::{CaptureConfig, CaptureSource};
+use crate::config::{CaptureConfig, CaptureSource, ContainerFormat};
 use ashpd::desktop::screencast::{CursorMode, Screencast, SourceType};
 use ashpd::desktop::PersistMode;
 use gstreamer::prelude::*;
@@ -13,6 +13,47 @@ use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::{debug, error, info, warn};
+
+/// H.264 encoders in order of preference (hardware first, then software fallback)
+const H264_ENCODERS: &[&str] = &[
+    "vaapih264enc",  // Intel/AMD iGPU via VA-API
+    "nvh264enc",     // NVIDIA via NVENC
+    "x264enc",       // Software fallback (libx264)
+];
+
+/// Detect the best available H.264 encoder from GStreamer registry
+///
+/// Returns the element factory name of the best available encoder,
+/// preferring hardware encoders over software fallback.
+/// Returns None if no H.264 encoder is available.
+pub fn detect_available_encoder() -> Option<&'static str> {
+    // Ensure GStreamer is initialized (safe to call multiple times)
+    if gstreamer::init().is_err() {
+        warn!("Failed to initialize GStreamer for encoder detection");
+        return None;
+    }
+
+    for encoder in H264_ENCODERS {
+        if let Some(factory) = gstreamer::ElementFactory::find(encoder) {
+            // Verify the factory can create an element (plugin is fully loaded)
+            if factory.create().build().is_ok() {
+                debug!("Found available H.264 encoder: {}", encoder);
+                return Some(encoder);
+            }
+        }
+    }
+
+    warn!("No H.264 encoder found in GStreamer registry");
+    None
+}
+
+/// Get the GStreamer muxer element name for the given container format
+pub fn get_muxer_for_container(container: ContainerFormat) -> &'static str {
+    match container {
+        ContainerFormat::Mp4 => "mp4mux",
+        ContainerFormat::Mkv => "matroskamux",
+    }
+}
 
 /// Linux capture backend using xdg-desktop-portal
 #[derive(Debug)]
@@ -383,5 +424,28 @@ mod tests {
         let backend = LinuxCaptureBackend::new();
         // Just verify it creates without panic
         assert!(backend.session.try_lock().is_ok());
+    }
+
+    #[test]
+    fn test_detect_available_encoder_returns_valid_element() {
+        // This test verifies that if an encoder is found, it's one we expect
+        if let Some(encoder) = detect_available_encoder() {
+            assert!(
+                H264_ENCODERS.contains(&encoder),
+                "Detected encoder '{}' should be in our known list",
+                encoder
+            );
+        }
+        // Note: It's OK if no encoder is found (e.g., CI without GStreamer plugins)
+    }
+
+    #[test]
+    fn test_muxer_for_mp4() {
+        assert_eq!(get_muxer_for_container(ContainerFormat::Mp4), "mp4mux");
+    }
+
+    #[test]
+    fn test_muxer_for_mkv() {
+        assert_eq!(get_muxer_for_container(ContainerFormat::Mkv), "matroskamux");
     }
 }

@@ -238,8 +238,8 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
 #### 4.1 Recording Pipeline Setup
 - [x] 16a. Add `RecordingResult` struct and extend `CaptureBackend` trait with `start_recording`/`stop_recording` methods
 - [x] 16b. Add recording events (`RECORDING_STARTED`, `RECORDING_STOPPED`) in Rust + TS types
-- [ ] 16c. Add encoder detection utility (vaapih264enc/nvh264enc/x264enc)
-- [ ] 16d. Add muxer selection utility (mp4mux/matroskamux)
+- [x] 16c. Add encoder detection utility (vaapih264enc/nvh264enc/x264enc)
+- [x] 16d. Add muxer selection utility (mp4mux/matroskamux)
 - [ ] 16e. Create `RecordingPipeline` struct with lifecycle management (new/start/stop)
 - [ ] 16f. Implement `start_recording` in `LinuxCaptureBackend`
 - [ ] 16g. Implement `stop_recording` in `LinuxCaptureBackend`
