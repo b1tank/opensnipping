@@ -93,3 +93,31 @@ Report back: [what info to return when complete]
 - Requires UX/visual verification you cannot do → provide verification steps, wait for human confirmation, then commit
 
 See **Commit quality evidence** and **Human verification decision flow** in [copilot-instructions.md](../copilot-instructions.md#commit-and-push-policy) for details.
+
+## Session Continuity After Task Completion
+
+After committing and pushing an atomic task, assess whether to continue in the current session or suggest a new one:
+
+**Continue in current session when:**
+- Next task builds directly on just-completed work (e.g., 13a→13b, adding UI for newly added backend method)
+- Accumulated context is still relevant and valuable
+- Tasks share the same files/modules
+- Sequential dependency exists (next task needs knowledge of what you just did)
+
+**Suggest new session when:**
+- Next task is in a different area of the codebase
+- Context window is getting crowded with stale information
+- Task is independent and would benefit from fresh exploration
+- Switching domains (e.g., from Rust backend to unrelated frontend feature)
+
+**Prompt format:**
+```
+[TASK COMPLETED] ✓ Committed and pushed: [commit summary]
+
+Next task from plan: [task description]
+
+Recommendation: [Continue here / New session]
+Reason: [brief justification]
+
+[If new session suggested]: Starting fresh would give you a clean context window for [reason]. Want me to continue anyway, or open a new session?
+```
