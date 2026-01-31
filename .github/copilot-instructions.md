@@ -2,14 +2,14 @@
 
 Remote repo: https://github.com/b1tank/opensnipping
 
-This repo is a Tauri v2 desktop app (React/TypeScript frontend + Rust backend) for a lightweight screen recorder + screenshot tool.
+A Tauri v2 desktop app (React/TypeScript frontend + Rust backend) for lightweight screen recording and screenshots.
 
-Primary product docs:
+Primary docs:
 - Spec: `opensnipping/spec.md`
-- Roadmap/plan: `opensnipping/plan.md`
-- Public-facing README: `README.md`
+- Plan: `opensnipping/plan.md`
+- README: `README.md`
 
-If instructions conflict, prefer the spec/plan over convenience.
+When instructions conflict, spec/plan takes precedence.
 
 ## Project Structure & Module Organization
 
@@ -29,19 +29,19 @@ If instructions conflict, prefer the spec/plan over convenience.
 	- Event payload structs + event names: `opensnipping/src-tauri/src/events.rs`
 
 Notes:
-- `opensnipping/src-tauri/target/` is build output; don’t edit or rely on it.
-- This repo currently contains an MVP “orchestration shell” (state machine + UI wiring) more than a full capture pipeline.
+- `opensnipping/src-tauri/target/` is build output—do not edit or depend on it.
+- Currently an MVP "orchestration shell" (state machine + UI wiring), not a full capture pipeline.
 
 ## Coding Principles
 
-- Prioritize separation of concerns between frontend (UI) and backend (capture logic).
-- Write code in modular, reusable, and testable components/functions/files.
-- Make small, incremental changes that are easy to review and test.
-- Keep platform-specific logic in Rust: Anything OS/media/capture-related belongs in the backend; frontend stays declarative and testable with mocks.
-- Error paths are first-class: Every new command/event should have explicit failure behavior (error code + message), and the UI should display something user-visible rather than silently failing.
-- Add clear, intentional logging at key control points (command entry/exit, state transitions, and error boundaries) to aid debugging and maintenance.
-- No hidden side effects: Don't introduce implicit background tasks/timers without an explicit lifecycle (start/stop) and a clear owner (usually the state machine).
-- Prefer additive over refactor: Avoid broad refactors while implementing features. If a refactor is truly required, do it as a separate atomic step with no behavior change.
+- **Separation of concerns**: Frontend handles UI; backend handles capture logic.
+- **Modular code**: Write reusable, testable components and functions.
+- **Small changes**: Make incremental changes that are easy to review and test.
+- **Platform logic in Rust**: OS/media/capture code belongs in the backend; frontend stays declarative and mockable.
+- **First-class errors**: Every command/event must have explicit failure behavior (error code + message); UI must surface errors visibly.
+- **Intentional logging**: Log at key control points (command entry/exit, state transitions, error boundaries).
+- **No hidden side effects**: Background tasks/timers require explicit lifecycle (start/stop) and clear ownership.
+- **Additive over refactor**: Avoid broad refactors during feature work. If necessary, refactor in a separate commit with no behavior change.
 
 ## Build, Test, and Development Commands
 
@@ -63,7 +63,7 @@ Tooling notes:
 
 ## Cross-Layer Contract (TS ⇄ Rust)
 
-Keep the Rust backend and the TS frontend in sync. The UI assumes these are stable:
+Keep Rust backend and TS frontend in sync. The UI depends on these being stable:
 
 - Event names
 	- Rust source of truth: `opensnipping/src-tauri/src/events.rs` (`event_names::*`)
@@ -81,56 +81,55 @@ Keep the Rust backend and the TS frontend in sync. The UI assumes these are stab
 	- Rust schema + validation: `opensnipping/src-tauri/src/config.rs` (`CaptureConfig::validate`)
 	- TS shape: `opensnipping/src/types.ts` (`CaptureConfig`)
 
-When adding/removing fields or enum variants, update BOTH sides and adjust tests.
+When adding/removing fields or enum variants, update both sides and adjust tests.
 
-**Contract-first changes:** If you touch events/commands/types, update both sides (Rust in `events.rs` / `lib.rs` and TS in `types.ts`) in the same change, and keep names/fields byte-for-byte consistent.
+**Contract-first changes:** When modifying events/commands/types, update both Rust (`events.rs`/`lib.rs`) and TS (`types.ts`) in the same commit. Keep names/fields byte-for-byte consistent.
 
 ## Orchestration & State Machine
 
-The Rust `StateMachine` is the source of truth for legal capture transitions:
-- See `opensnipping/src-tauri/src/state.rs`.
-- UI should not “invent” state; it should react to Rust events (`capture:state_changed`) and/or query `get_state`.
+The Rust `StateMachine` is the single source of truth for capture transitions:
+- Definition: `opensnipping/src-tauri/src/state.rs`
+- UI reacts to Rust events (`capture:state_changed`) or queries `get_state`—never invents state.
 
-**State machine is law:** UI should never "fix up" state; it can only request actions and render backend state. If a UI behavior needs a new state/transition, add it to the Rust `StateMachine` first (and tests there), then wire UI.
+**State machine is law:** UI never "fixes up" state; it only requests actions and renders backend state. New states/transitions go into Rust `StateMachine` first (with tests), then wire to UI.
 
-If you add new user actions (commands), wire them end-to-end:
-- Add a `#[tauri::command]` in `opensnipping/src-tauri/src/lib.rs`
-- Export it via `tauri::generate_handler![...]`
-- Call it via `invoke(...)` in the UI
-- Add/adjust tests:
+New user actions (commands) require end-to-end wiring:
+1. Add `#[tauri::command]` in `opensnipping/src-tauri/src/lib.rs`
+2. Export via `tauri::generate_handler![...]`
+3. Call via `invoke(...)` in UI
+4. Add tests:
 	- UI: update mocks in `opensnipping/src/test/setup.ts` and tests in `opensnipping/src/App.test.tsx`
 	- Rust: add unit tests in the relevant module
 
 ## Testing Guidelines
 
-Frontend:
-- Prefer UI tests that assert user-visible behavior (button click → invoke called → UI updates).
-- Keep Tauri interactions mocked via `opensnipping/src/test/setup.ts`.
+**Frontend:**
+- Test user-visible behavior (button click → invoke called → UI updates).
+- Mock Tauri interactions via `opensnipping/src/test/setup.ts`.
 
-Rust:
+**Rust:**
 - Keep domain logic testable without a running app window.
-- The existing state machine tests in `opensnipping/src-tauri/src/state.rs` are the pattern to follow.
+- Follow the pattern in `opensnipping/src-tauri/src/state.rs`.
 
-**Deterministic tests over "real device" tests:** Add/adjust unit tests around the Rust domain logic and Vitest UI mocks; avoid tests that require a running Tauri window unless absolutely necessary.
+**Deterministic over "real device" tests:** Prefer unit tests around Rust domain logic and Vitest UI mocks. Avoid tests requiring a running Tauri window unless necessary.
 
-**Manual verification guidance:** When asking for or running visual verification, always print the manual verification steps before running any server/startup command (e.g., `npm run tauri dev`) so the user can follow along.
+**Manual verification:** Print verification steps before running any server command (e.g., `npm run tauri dev`) so users can follow along.
 
-**Error handling maintenance:** If tests reveal new error types or cases, add explicit handling in code immediately (map to user-visible errors, log with context, and update tests). Keep error handling additive and consistent to make future fixes easier.
+**Error handling:** When tests reveal new error types, add explicit handling immediately—map to user-visible errors, log with context, and update tests.
 
 ## Guardrails / Hygiene
 
-- Keep changes scoped and “atomic”: one feature slice per PR/change.
-- Avoid large refactors unless required by the spec/plan.
-- Compilation should have no warnings (and no errors). Fix hygiene warnings immediately (e.g., `cargo check` dead_code warnings like unused fields).
-- Don’t hardcode platform paths in UI beyond clearly temporary MVP scaffolding.
-	- Current UI uses `/tmp/recording.mp4` in `opensnipping/src/App.tsx`; treat this as a placeholder.
-- Don’t edit generated build artifacts (especially `opensnipping/src-tauri/target/`).
+- **Atomic changes**: One feature slice per PR/commit.
+- **Avoid large refactors** unless required by spec/plan.
+- **Zero warnings**: Compilation must have no warnings or errors. Fix hygiene issues immediately (e.g., `cargo check` dead_code warnings).
+- **No hardcoded paths** in UI beyond temporary MVP scaffolding (e.g., `/tmp/recording.mp4` is a placeholder).
+- **Never edit build artifacts** (especially `opensnipping/src-tauri/target/`).
 
-**Small diffs, explicit PR intent:** Each change should have a single intent ("add command X", "add event Y", "tighten validation"), and avoid drive-by formatting/renames.
+**Small diffs, explicit intent:** Each change has one purpose ("add command X", "add event Y"). Avoid drive-by formatting/renames.
 
 ## Work Categories
 
-All work falls into: **feat**, **fix**, **docs**, **refactor**, **test**, **chore**, **agent**. Classify before starting to maintain atomic commits.
+Classify all work before starting to maintain atomic commits:
 
 | Category   | Description                                      | Typical Risk |
 |------------|--------------------------------------------------|---------------|
@@ -144,9 +143,9 @@ All work falls into: **feat**, **fix**, **docs**, **refactor**, **test**, **chor
 
 ## Plan Management & Task Decomposition
 
-**`plan.md` is a living document** — not a static roadmap. Treat it as continuously evolving based on discovered complexity.
+**`plan.md` is a living document**—not a static roadmap. It evolves as complexity is discovered.
 
-**Before starting any task**, evaluate whether it needs further decomposition:
+**Before starting any task**, evaluate decomposition need:
 
 | Task Size Indicator | Typical Lines Changed | Action |
 |---------------------|----------------------|--------|
@@ -156,22 +155,22 @@ All work falls into: **feat**, **fix**, **docs**, **refactor**, **test**, **chor
 | Large task | >100 lines | **Must decompose first** |
 
 **Decomposition workflow:**
-1. If a task appears to require >100 lines of code, stop before implementation
-2. Break it into sub-tasks with checkboxes in `plan.md` (each sub-task should be one atomic commit)
-3. Ask human for confirmation: "I've decomposed [task] into [N] sub-tasks. Does this look right?"
+1. If task appears to require >100 lines, stop before implementing
+2. Break into sub-tasks with checkboxes in `plan.md` (each = one atomic commit)
+3. Ask human: "I've decomposed [task] into [N] sub-tasks. Does this look right?"
 4. Proceed only after confirmation
 
 **Signs a task needs decomposition:**
-- Multiple unrelated files must change
-- Multiple state transitions or new states required
-- Both backend and frontend changes beyond contract sync
-- Task description uses vague words like "implement pipeline" or "add full support"
+- Multiple unrelated files changing
+- Multiple state transitions or new states
+- Backend + frontend changes beyond contract sync
+- Vague descriptions like "implement pipeline" or "add full support"
 
-**Do not over-decompose:** If a task can be completed in <50 lines with clear intent, keep it as one task.
+**Do not over-decompose:** Tasks completable in <50 lines with clear intent stay as one task.
 
 ## Commit Message Guide
 
-Use the format: `<category>: <short description>`
+Format: `<category>: <short description>`
 
 Examples:
 - `feat: add region selection overlay`
@@ -182,51 +181,52 @@ Examples:
 - `chore: update Tauri to v2.1`
 - `agent: clarify commit message conventions`
 
-Keep the description lowercase, imperative, and under 50 characters.
+Keep descriptions lowercase, imperative, under 50 characters.
 
 ## Commit and Push Policy
 
-**Atomic commits are mandatory** — each commit must be self-contained and verifiable:
-- Each numbered task in `plan.md` (e.g., 13a, 15a) results in at least one commit
-- A task may have multiple commits if logical separation is needed
-- Never bundle unrelated changes in a single commit
-- Test tasks count as real tasks—commit them separately
+**Atomic commits are mandatory**—each commit must be self-contained and verifiable:
+- Each numbered task in `plan.md` (e.g., 13a, 15a) = at least one commit
+- Multiple commits per task are fine if logically separated
+- Never bundle unrelated changes
+- Test tasks are real tasks—commit separately
 
-**Scope your commits:** Only commit files you changed in your session. Other agents may work in parallel, leaving unrelated changes in the working tree.
-- Before committing, run `git status` and review which files are modified
-- Explicitly stage only files relevant to your task (e.g., `git add file1 file2`) instead of `git add -A`
-- If you see unexpected changes or are unsure whether a file is yours, ask the human before committing
+**Scope your commits:** Only commit files you changed. Other agents may work in parallel.
+- Run `git status` before committing
+- Stage explicitly (`git add file1 file2`), not `git add -A`
+- Ask human if you see unexpected changes
 
-**Commit quality evidence:** Existing tests passing is necessary but NOT sufficient. Before committing, explicitly state the evidence that the new code is correct:
-- **New test added**: A test that exercises the new code path and passes
-- **Contract-only change**: Type/event additions with no runtime behavior (harmless until wired)
-- **Refactor with existing coverage**: Existing tests already cover the changed behavior
-- **Manual verification**: Specific steps performed and observed results
+**Commit quality evidence:** Tests passing is necessary but not sufficient. State evidence of correctness:
+- **New test added**: Test exercises the new code path and passes
+- **Contract-only change**: Type/event additions with no runtime behavior yet
+- **Refactor with existing coverage**: Existing tests cover the changed behavior
+- **Manual verification**: Steps performed and results observed
 
-Always include a brief rationale in the commit workflow (e.g., "Tests pass; new `capture_screenshot` method is interface-only, no callers yet").
+Include brief rationale (e.g., "Tests pass; new `capture_screenshot` method is interface-only, no callers yet").
 
-**Pre-commit checks via subagent:** Before committing, run the pre-commit agent using the `runSubagent` tool and address any findings (lint, tests, plan.md checkbox status, cleanup).
+**Pre-commit checks:** Run the pre-commit agent via `runSubagent` and address findings before committing.
 
 **Human verification decision flow:**
-- If you can verify correctness yourself (tests pass, contract-only, logic is deterministic) → commit and push
-- If the change requires visual/UX verification you cannot perform → ask human first with verification steps, then commit after confirmation
+- Verifiable yourself (tests pass, contract-only, deterministic logic) → commit and push
+- Requires visual/UX verification → ask human first with steps, then commit after confirmation
 
-**Proactive UI/UX verification:** When a change adds or modifies user-visible behavior (new buttons, visual elements, workflows, or interactions), proactively offer the human a chance to see it before committing—even if tests pass. Frame it as an opportunity, not a blocker (e.g., "Want to see the new [feature] in action before I commit?"). Print verification steps first, then offer to start the dev server.
+**Proactive UI/UX verification:** When changes affect user-visible behavior, offer the human a chance to see it before committing—even if tests pass. Frame as opportunity, not blocker (e.g., "Want to see the new [feature] before I commit?"). Print verification steps first.
 
 ## Parallel Work & Agent Delegation
 
-When you discover independent secondary work (bugs, missing docs/tests, refactor opportunities) while on a primary task, prompt the human with delegation options:
-- **Monitored**: Another agent works in parallel, human reviews both outputs
+When you discover independent secondary work (bugs, missing docs/tests, refactor opportunities) during a primary task, offer delegation options:
+- **Monitored**: Another agent works in parallel; human reviews both outputs
 - **YOLO/Background**: Agent works autonomously on low-risk tasks (docs, tests, chore)
 
-See `.github/agents/engineer.agent.md` for detailed delegation protocols and prompt formats.
+See [engineer.agent.md](agents/engineer.agent.md) for delegation protocols.
 
 ## Agent Notes
 
-There is an agent entrypoint at `.github/agents/engineer.agent.md` that points to the spec/plan and requests atomic steps + tests.
-There is a pre-commit agent at `.github/agents/pre-commit.agent.md` that should be invoked via `runSubagent` before committing.
-There is a planner agent at `.github/agents/planner.agent.md` for decomposing large tasks into atomic sub-tasks.
+Available agents:
+- **engineer** (`.github/agents/engineer.agent.md`): Main workflow—atomic steps + tests
+- **pre-commit** (`.github/agents/pre-commit.agent.md`): Invoke via `runSubagent` before committing
+- **planner** (`.github/agents/planner.agent.md`): Decompose large tasks into atomic sub-tasks
 
 When uncertain:
-- Read `opensnipping/spec.md` and `opensnipping/plan.md` first.
-- Prefer verified answers from code over guesses.
+- Read `opensnipping/spec.md` and `opensnipping/plan.md` first
+- Prefer verified answers from code over guesses

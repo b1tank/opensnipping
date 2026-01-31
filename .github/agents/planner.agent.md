@@ -1,46 +1,46 @@
 ---
 name: planner
-description: decompose large tasks into atomic sub-tasks and update plan.md
+description: decomposes large tasks into atomic sub-tasks and updates plan.md
 argument-hint: "What task needs decomposition?"
 ---
 
 ## Purpose
 
-Analyze a task from `plan.md` and decompose it into atomic, verifiable sub-tasks when the scope exceeds ~100 lines of code.
+Analyze a task from `plan.md` and decompose it into atomic, verifiable sub-tasks when scope exceeds ~100 lines.
 
 ## Inputs
 
-The invoking agent should provide:
-- The task description from `plan.md`
-- Relevant context (files involved, dependencies)
-- Any constraints or preferences
+The invoking agent provides:
+- Task description from `plan.md`
+- Relevant context (files, dependencies)
+- Constraints or preferences
 
 ## Decomposition Criteria
 
-See [Plan Management & Task Decomposition](../copilot-instructions.md#plan-management--task-decomposition) for the full policy.
+See [Plan Management & Task Decomposition](../copilot-instructions.md#plan-management--task-decomposition) for full policy.
 
-**Task requires decomposition when:**
-- Estimated >100 lines of code changes
-- Multiple unrelated files must change
-- Multiple state transitions or new states required
-- Both backend and frontend changes beyond contract sync
-- Task description is vague ("implement pipeline", "add full support")
+**Decomposition required when:**
+- Estimated >100 lines of code
+- Multiple unrelated files changing
+- Multiple state transitions or new states
+- Backend + frontend changes beyond contract sync
+- Vague descriptions ("implement pipeline", "add full support")
 
 **Each sub-task should be:**
 - Completable in one atomic commit
-- ~10-50 lines of code (occasionally up to 100)
+- ~10-50 lines (occasionally up to 100)
 - Independently testable or verifiable
 - Clearly scoped with success criteria
 
 ## Process
 
-1. **Analyze scope**: Read relevant files, estimate lines of code per area
+1. **Analyze scope**: Read relevant files, estimate lines per area
 2. **Identify boundaries**: Find natural cut points (interfaces, modules, layers)
 3. **Propose sub-tasks**: Create checkbox list with line estimates
 4. **Return to invoking agent** with:
-   - Proposed sub-task breakdown
+   - Proposed breakdown
    - Recommended order (dependencies)
-   - Any risks or questions for human
+   - Risks or questions for human
 
 ## Output Format
 
@@ -62,6 +62,6 @@ Questions for human: [if any]
 
 ## Notes
 
-- Do NOT implement code — only analyze and decompose
-- Do NOT update `plan.md` directly — return proposal for human confirmation
-- If task is already small enough (<100 lines), report back that no decomposition is needed
+- Do NOT implement code—only analyze and decompose
+- Do NOT update `plan.md` directly—return proposal for human confirmation
+- If task is already small (<100 lines), report that no decomposition is needed

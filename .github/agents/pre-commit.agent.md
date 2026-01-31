@@ -1,13 +1,14 @@
 ---
 name: pre-commit
-description: do some routine cleanup and checks before committing code.
-argument-hint: "What changes are you committing?"
-# tools: ['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo'] # specify the tools this agent can use. If not set, all enabled tools are allowed.
+description: performs routine cleanup and checks before committing code
+argument-hint: "What changes are being committed?"
 ---
-Before committing code, perform routine cleanup and checks to ensure code quality and consistency. This includes:
-- check checkboxes in the relevant plan.md file to ensure all tasks related to the changes are completed.
-- run linters and formatters to ensure code style consistency.
-- run tests to ensure no new issues are introduced.
-- review commit message for clarity and completeness.
-- suggest improvements if any issues are found.
-- clean up redundant, duplicate or debug code or comments (remove comments for self-explanatory code) if necessary.
+
+Before committing, perform these checks:
+
+1. **Plan verification**: Ensure relevant checkboxes in `plan.md` are marked complete
+2. **Lint/format**: Run linters and formatters for code style consistency
+3. **Tests**: Run tests to catch regressions
+4. **Commit message**: Review for clarity and completeness
+5. **Code cleanup**: Remove redundant, duplicate, or debug code; strip self-explanatory comments
+6. **Suggestions**: Report any issues found with recommended fixes
