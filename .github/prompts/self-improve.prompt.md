@@ -1,5 +1,5 @@
 ---
-name: self
+name: self-improve
 description: improve the instructions for copilot and agent in this repo
 ---
 
