@@ -1,6 +1,6 @@
 # OpenSnipping
 
-A lightweight screen recorder and screenshot tool for Linux (with cross-platform support planned).
+Lightweight screen recorder and screenshot tool for Linux (cross-platform planned).
 
 ---
 
@@ -8,14 +8,14 @@ A lightweight screen recorder and screenshot tool for Linux (with cross-platform
 
 - Screen, window, region, and monitor capture
 - Recording with pause/resume
-- Screenshot with simple annotation
+- Screenshots with annotation
 - System audio + microphone recording
-- HiDPI / fractional scaling support
+- HiDPI and fractional scaling support
 - Minimal, ephemeral GNOME-style UI
 
 ## 🚧 Status
 
-MVP in development. See [plan.md](plan.md) for roadmap.
+MVP in development. See [plan.md](opensnipping/plan.md) for roadmap.
 
 ## 🔧 Development
 
@@ -23,7 +23,7 @@ MVP in development. See [plan.md](plan.md) for roadmap.
 
 - Node.js 20+
 - Rust toolchain
-- Linux system dependencies:
+- Linux dependencies:
   ```bash
   sudo apt install libwebkit2gtk-4.1-dev librsvg2-dev libgtk-3-dev
   ```
@@ -31,6 +31,7 @@ MVP in development. See [plan.md](plan.md) for roadmap.
 ### Setup
 
 ```bash
+cd opensnipping
 npm install
 npm run tauri dev
 ```
@@ -38,8 +39,9 @@ npm run tauri dev
 ### Testing
 
 ```bash
-npm test           # UI tests (Vitest)
-cd src-tauri && cargo test  # Rust tests
+cd opensnipping
+npm test                        # UI tests (Vitest)
+cd src-tauri && cargo test      # Rust tests
 ```
 
 ## 📝 License
