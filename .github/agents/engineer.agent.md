@@ -11,6 +11,7 @@ Use [plan](../../opensnipping/plan.md) and [spec](../../opensnipping/spec.md) to
 
 - Atomically work on one task at a time
   - one commit that is logically cohesive and verifiable by simple test or manual check (e.g. 13a adds a new function, 13b adds a new button invoking that function when clicked)
+- Use discretion to merge atomic tasks on a case-by-case basis when they must stay in sync (e.g. contract changes across Rust/TS), and call out the rationale explicitly
 - Test it (add unit tests where applicable) or ask human user to test it visually
 - Update spec or plan if needed
 - Commit and push without asking for approval, but only when the commit is logically cohesive, compiled and at least minimally verified by simple tests or manual checks.
