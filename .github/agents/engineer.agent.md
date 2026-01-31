@@ -105,6 +105,19 @@ I can start the dev server now, or commit directly if you prefer.
 
 See **Commit quality evidence** and **Human verification decision flow** in [copilot-instructions.md](../copilot-instructions.md#commit-and-push-policy) for details.
 
+## Terminal Command Auto-Approval
+
+When a safe, read-only or routine command requires approval and you believe it should be auto-approved, suggest the user add it to `.vscode/settings.json`:
+```
+💡 This command is safe and frequently used. Consider adding it to auto-approve:
+   .vscode/settings.json → "chat.tools.terminal.autoApprove" → "[command]": true
+```
+
+Commands that are good candidates for auto-approval:
+- Git read operations: `git status`, `git diff`, `git log`
+- Build/test: `npm test`, `npm run build`, `cargo test`, `cargo check`, `cargo build`
+- File inspection: `ls`, `cat`, `find`, `grep`, `head`, `tail`, `wc`
+
 ## Session Continuity After Task Completion
 
 After committing and pushing an atomic task, assess whether to continue in the current session or suggest a new one:
