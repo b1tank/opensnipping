@@ -255,22 +255,27 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
    - permission needed
    - portal denied
    - encoder unavailable
-- [ ] 32. Add tests:
+- [ ] 32. Implement portal restore token for persistent screen selection:
+   - Use `PersistMode::Application` instead of `DoNot`
+   - Store returned `restore_token` (Tauri store plugin or file)
+   - Pass token to subsequent `select_sources` calls to skip picker
+   - Handle token invalidation gracefully (fall back to picker)
+- [ ] 33. Add tests:
    - UI: indicator + timer rendering tests
    - Rust: hotkey command wiring tested via unit tests around command handlers (logic, not OS key registration)
 
 **Done when**: full spec control flow works without a “settings app” feel.
 
 ### Milestone 8 — Reliability + Linux Packaging (2–5 days)
-- [ ] 33. Recovery & cleanup:
+- [ ] 34. Recovery & cleanup:
    - crash-safe finalization
    - temp files
    - handle portal session invalidation
-- [ ] 34. Add basic telemetry logs (local only): per-recording pipeline summary.
-- [ ] 35. Add CI to prevent regressions:
+- [ ] 35. Add basic telemetry logs (local only): per-recording pipeline summary.
+- [ ] 36. Add CI to prevent regressions:
    - run UI tests (`npm test`) and Rust tests (`cargo test`) on every push
    - (optional) Linux integration tests behind a separate job and/or feature flag
-- [ ] 36. Packaging:
+- [ ] 37. Packaging:
    - `deb` + AppImage
    - document dependencies (GStreamer plugins)
 
