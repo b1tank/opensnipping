@@ -6,10 +6,11 @@ pub mod state;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter};
 
-use capture::{CaptureBackend, CaptureBackendError, SelectionResult};
+use capture::{CaptureBackend, CaptureBackendError, ScreenshotResult, SelectionResult};
 use config::CaptureConfig;
-use events::{event_names, ErrorEvent, SelectionCompleteEvent, StateChangedEvent};
+use events::{event_names, ErrorEvent, ScreenshotCompleteEvent, SelectionCompleteEvent, StateChangedEvent};
 use state::{CaptureError, CaptureState, ErrorCode, StateMachine};
+use std::path::PathBuf;
 use tracing::info;
 
 /// Application state managed by Tauri
@@ -268,6 +269,84 @@ fn reset_error(app: AppHandle, state: tauri::State<AppState>) -> Result<CaptureS
     }
 }
 
+/// Take a screenshot: request portal selection, capture frame, emit event
+#[tauri::command]
+async fn take_screenshot(
+    app: AppHandle,
+    _state: tauri::State<'_, AppState>,
+    config: CaptureConfig,
+) -> Result<ScreenshotResult, String> {
+    // Validate config
+    if let Err(err) = config.validate() {
+        let error = CaptureError {
+            code: ErrorCode::InvalidConfig,
+            message: format!("{}: {}", err.field, err.message),
+        };
+        emit_error(&app, &error);
+        return Err(error.message);
+    }
+
+    info!("Starting screenshot portal selection...");
+
+    // Request selection via portal
+    let backend = capture::get_backend();
+    let selection_result = backend.request_selection(&config).await;
+
+    let selection = match selection_result {
+        Ok(sel) => {
+            info!(
+                "Screenshot selection successful: node_id={}",
+                sel.node_id
+            );
+            sel
+        }
+        Err(backend_err) => {
+            info!("Screenshot selection failed: {:?}", backend_err);
+            let error = backend_error_to_capture_error(&backend_err);
+            emit_error(&app, &error);
+            return Err(error.message);
+        }
+    };
+
+    // Generate unique output path
+    let output_path = PathBuf::from(format!(
+        "/tmp/opensnipping-{}.png",
+        uuid::Uuid::new_v4()
+    ));
+
+    info!("Capturing screenshot to {:?}...", output_path);
+
+    // Capture the screenshot
+    let screenshot_result = backend.capture_screenshot(&selection, &output_path).await;
+
+    match screenshot_result {
+        Ok(screenshot) => {
+            info!(
+                "Screenshot captured: {}x{} at {}",
+                screenshot.width, screenshot.height, screenshot.path
+            );
+
+            // Emit screenshot complete event
+            let _ = app.emit(
+                event_names::SCREENSHOT_COMPLETE,
+                ScreenshotCompleteEvent {
+                    path: screenshot.path.clone(),
+                    width: screenshot.width,
+                    height: screenshot.height,
+                },
+            );
+
+            Ok(screenshot)
+        }
+        Err(backend_err) => {
+            info!("Screenshot capture failed: {:?}", backend_err);
+            let error = backend_error_to_capture_error(&backend_err);
+            emit_error(&app, &error);
+            Err(error.message)
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -284,6 +363,7 @@ pub fn run() {
             stop_recording,
             finalize_complete,
             reset_error,
+            take_screenshot,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
