@@ -127,7 +127,32 @@ Rust:
 
 ## Work Categories
 
-All work falls into: **feat**, **fix**, **docs**, **refactor**, **test**, **chore**. Classify before starting to maintain atomic commits.
+All work falls into: **feat**, **fix**, **docs**, **refactor**, **test**, **chore**, **agent**. Classify before starting to maintain atomic commits.
+
+| Category   | Description                                      |
+|------------|--------------------------------------------------|
+| `feat`     | New feature or capability                        |
+| `fix`      | Bug fix                                          |
+| `docs`     | Documentation only                               |
+| `refactor` | Code restructure without behavior change         |
+| `test`     | Adding or updating tests                         |
+| `chore`    | Build, CI, config, or maintenance tasks          |
+| `agent`    | Improving agent instructions or prompts          |
+
+## Commit Message Guide
+
+Use the format: `<category>: <short description>`
+
+Examples:
+- `feat: add region selection overlay`
+- `fix: handle null capture config`
+- `docs: update README with install steps`
+- `refactor: extract validation into config module`
+- `test: add state machine transition tests`
+- `chore: update Tauri to v2.1`
+- `agent: clarify commit message conventions`
+
+Keep the description lowercase, imperative, and under 50 characters.
 
 ## Parallel Work & Agent Delegation
 
