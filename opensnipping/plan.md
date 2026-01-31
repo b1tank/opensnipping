@@ -220,10 +220,10 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
 - [x] 14i. Add annotation CSS in `App.css`: full-screen overlay, toolbar with buttons
 
 #### 3.5 Tests
-- [ ] 15a. Rust: unit test for temp path generation (unique, correct dir)
-- [ ] 15b. Rust: extend `FakeCaptureBackend` tests to cover `take_screenshot` → event emission
-- [ ] 15c. UI: create `AnnotationCanvas.test.tsx` with mocked canvas; test undo/clear/export callbacks
-- [ ] 15d. Update `setup.ts` mocks: add `take_screenshot` handler, `EVENT_SCREENSHOT_COMPLETE` listener
+- [x] 15a. Rust: unit test for temp path generation (unique, correct dir)
+- [x] 15b. Rust: extend `FakeCaptureBackend` tests to cover `take_screenshot` → event emission
+- [x] 15c. UI: create `AnnotationCanvas.test.tsx` with mocked canvas; test undo/clear/export callbacks
+- [x] 15d. Update `setup.ts` mocks: add `take_screenshot` handler, `EVENT_SCREENSHOT_COMPLETE` listener
 
 **Done when**: user can take a region/window/screen screenshot and export an annotated PNG.
 
