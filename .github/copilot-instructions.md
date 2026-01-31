@@ -125,6 +125,18 @@ Rust:
 
 **Small diffs, explicit PR intent:** Each change should have a single intent ("add command X", "add event Y", "tighten validation"), and avoid drive-by formatting/renames.
 
+## Work Categories
+
+All work falls into: **feat**, **fix**, **docs**, **refactor**, **test**, **chore**. Classify before starting to maintain atomic commits.
+
+## Parallel Work & Agent Delegation
+
+When you discover independent secondary work (bugs, missing docs/tests, refactor opportunities) while on a primary task, prompt the human with delegation options:
+- **Monitored**: Another agent works in parallel, human reviews both outputs
+- **YOLO/Background**: Agent works autonomously on low-risk tasks (docs, tests, chore)
+
+See `.github/agents/engineer.agent.md` for detailed delegation protocols and prompt formats.
+
 ## Agent Notes
 
 There is an agent entrypoint at `.github/agents/engineer.agent.md` that points to the spec/plan and requests atomic steps + tests.
