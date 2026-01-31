@@ -5,6 +5,7 @@
 
 use crate::capture::{CaptureBackend, CaptureBackendError, ScreenshotResult, SelectionResult};
 use crate::config::CaptureConfig;
+use image::{ImageBuffer, Rgb};
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
@@ -129,15 +130,41 @@ impl CaptureBackend for FakeCaptureBackend {
 
     async fn capture_screenshot(
         &self,
-        _selection: &SelectionResult,
+        selection: &SelectionResult,
         output_path: &Path,
     ) -> Result<ScreenshotResult, CaptureBackendError> {
-        // Return a fake successful result for testing
-        // Actual placeholder image generation will be added in task 13f
+        if !self.should_succeed.load(Ordering::SeqCst) {
+            let error = self.error_type.lock().unwrap().clone();
+            return Err(match error {
+                FakeError::PermissionDenied => {
+                    CaptureBackendError::PermissionDenied("Screenshot permission denied".to_string())
+                }
+                FakeError::PortalError => {
+                    CaptureBackendError::PortalError("Portal unavailable for screenshot".to_string())
+                }
+                FakeError::NoSource => {
+                    CaptureBackendError::NoSourceAvailable("No display for screenshot".to_string())
+                }
+            });
+        }
+
+        // Use dimensions from selection if available, otherwise default
+        let width = selection.width.unwrap_or(100);
+        let height = selection.height.unwrap_or(100);
+
+        // Generate a solid-color placeholder PNG (cornflower blue)
+        let img: ImageBuffer<Rgb<u8>, Vec<u8>> = ImageBuffer::from_fn(width, height, |_, _| {
+            Rgb([100u8, 149u8, 237u8]) // cornflower blue
+        });
+
+        img.save(output_path).map_err(|e| {
+            CaptureBackendError::Internal(format!("Failed to save placeholder PNG: {}", e))
+        })?;
+
         Ok(ScreenshotResult {
             path: output_path.to_string_lossy().to_string(),
-            width: 1920,
-            height: 1080,
+            width,
+            height,
         })
     }
 }
@@ -217,5 +244,78 @@ mod tests {
         let config = test_config();
         let result = backend.request_selection(&config).await.unwrap();
         assert_eq!(result.node_id, 123);
+    }
+
+    #[tokio::test]
+    async fn test_fake_backend_screenshot_creates_file() {
+        let backend = FakeCaptureBackend::succeeding();
+        let selection = SelectionResult {
+            node_id: 42,
+            stream_fd: None,
+            width: Some(64),
+            height: Some(48),
+        };
+
+        let temp_dir = std::env::temp_dir();
+        let output_path = temp_dir.join(format!("test_screenshot_{}.png", uuid::Uuid::new_v4()));
+
+        let result = backend.capture_screenshot(&selection, &output_path).await;
+        assert!(result.is_ok());
+
+        let screenshot = result.unwrap();
+        assert_eq!(screenshot.width, 64);
+        assert_eq!(screenshot.height, 48);
+        assert!(std::path::Path::new(&screenshot.path).exists());
+
+        // Cleanup
+        let _ = std::fs::remove_file(&output_path);
+    }
+
+    #[tokio::test]
+    async fn test_fake_backend_screenshot_uses_default_dimensions() {
+        let backend = FakeCaptureBackend::succeeding();
+        let selection = SelectionResult {
+            node_id: 42,
+            stream_fd: None,
+            width: None,
+            height: None,
+        };
+
+        let temp_dir = std::env::temp_dir();
+        let output_path = temp_dir.join(format!("test_screenshot_{}.png", uuid::Uuid::new_v4()));
+
+        let result = backend.capture_screenshot(&selection, &output_path).await;
+        assert!(result.is_ok());
+
+        let screenshot = result.unwrap();
+        assert_eq!(screenshot.width, 100); // default
+        assert_eq!(screenshot.height, 100); // default
+
+        // Cleanup
+        let _ = std::fs::remove_file(&output_path);
+    }
+
+    #[tokio::test]
+    async fn test_fake_backend_screenshot_fails_when_configured() {
+        let backend = FakeCaptureBackend::permission_denied();
+        let selection = SelectionResult {
+            node_id: 42,
+            stream_fd: None,
+            width: Some(100),
+            height: Some(100),
+        };
+
+        let temp_dir = std::env::temp_dir();
+        let output_path = temp_dir.join(format!("test_screenshot_{}.png", uuid::Uuid::new_v4()));
+
+        let result = backend.capture_screenshot(&selection, &output_path).await;
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            CaptureBackendError::PermissionDenied(_)
+        ));
+
+        // File should not exist
+        assert!(!output_path.exists());
     }
 }
