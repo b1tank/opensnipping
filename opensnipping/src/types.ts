@@ -69,9 +69,16 @@ export interface SelectionCompleteEvent {
   selection: SelectionResult;
 }
 
+export interface ScreenshotCompleteEvent {
+  path: string;
+  width: number;
+  height: number;
+}
+
 // Event names
 export const EVENT_STATE_CHANGED = "capture:state_changed";
 export const EVENT_PERMISSION_NEEDED = "capture:permission_needed";
 export const EVENT_PROGRESS = "capture:progress";
 export const EVENT_ERROR = "capture:error";
 export const EVENT_SELECTION_COMPLETE = "capture:selection_complete";
+export const EVENT_SCREENSHOT_COMPLETE = "capture:screenshot_complete";

@@ -41,6 +41,14 @@ pub struct SelectionCompleteEvent {
     pub selection: SelectionResult,
 }
 
+/// Event emitted when screenshot capture completes
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScreenshotCompleteEvent {
+    pub path: String,
+    pub width: u32,
+    pub height: u32,
+}
+
 /// Event names for Tauri event system
 pub mod event_names {
     pub const STATE_CHANGED: &str = "capture:state_changed";
@@ -48,4 +56,5 @@ pub mod event_names {
     pub const PROGRESS: &str = "capture:progress";
     pub const ERROR: &str = "capture:error";
     pub const SELECTION_COMPLETE: &str = "capture:selection_complete";
+    pub const SCREENSHOT_COMPLETE: &str = "capture:screenshot_complete";
 }
