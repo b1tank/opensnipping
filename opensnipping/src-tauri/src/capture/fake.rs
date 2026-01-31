@@ -3,8 +3,9 @@
 // This module provides a mock implementation of CaptureBackend
 // for use in tests without requiring actual portal/PipeWire integration.
 
-use crate::capture::{CaptureBackend, CaptureBackendError, SelectionResult};
+use crate::capture::{CaptureBackend, CaptureBackendError, ScreenshotResult, SelectionResult};
 use crate::config::CaptureConfig;
+use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
 
@@ -124,6 +125,20 @@ impl CaptureBackend for FakeCaptureBackend {
     async fn cancel_selection(&self) -> Result<(), CaptureBackendError> {
         self.cancel_count.fetch_add(1, Ordering::SeqCst);
         Ok(())
+    }
+
+    async fn capture_screenshot(
+        &self,
+        _selection: &SelectionResult,
+        output_path: &Path,
+    ) -> Result<ScreenshotResult, CaptureBackendError> {
+        // Return a fake successful result for testing
+        // Actual placeholder image generation will be added in task 13f
+        Ok(ScreenshotResult {
+            path: output_path.to_string_lossy().to_string(),
+            width: 1920,
+            height: 1080,
+        })
     }
 }
 

@@ -12,6 +12,7 @@ pub mod fake;
 use crate::config::CaptureConfig;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::path::Path;
 
 /// Result of a successful screen/window/region selection from portal
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -24,6 +25,17 @@ pub struct SelectionResult {
     pub width: Option<u32>,
     /// Height of the selected source
     pub height: Option<u32>,
+}
+
+/// Result of a successful screenshot capture
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScreenshotResult {
+    /// Path to the saved screenshot file
+    pub path: String,
+    /// Width of the screenshot in pixels
+    pub width: u32,
+    /// Height of the screenshot in pixels
+    pub height: u32,
 }
 
 /// Errors that can occur during capture operations
@@ -71,6 +83,16 @@ pub trait CaptureBackend: Send + Sync {
 
     /// Cancel an ongoing selection (if supported)
     fn cancel_selection(&self) -> impl std::future::Future<Output = Result<(), CaptureBackendError>> + Send;
+
+    /// Capture a screenshot from the given selection and save to output_path
+    ///
+    /// Uses GStreamer pipeline to capture a single frame from the PipeWire stream
+    /// and encode it as PNG.
+    fn capture_screenshot(
+        &self,
+        selection: &SelectionResult,
+        output_path: &Path,
+    ) -> impl std::future::Future<Output = Result<ScreenshotResult, CaptureBackendError>> + Send;
 }
 
 /// Get the appropriate capture backend for the current platform
@@ -103,5 +125,15 @@ impl CaptureBackend for StubBackend {
 
     async fn cancel_selection(&self) -> Result<(), CaptureBackendError> {
         Ok(())
+    }
+
+    async fn capture_screenshot(
+        &self,
+        _selection: &SelectionResult,
+        _output_path: &Path,
+    ) -> Result<ScreenshotResult, CaptureBackendError> {
+        Err(CaptureBackendError::NotSupported(
+            "Screenshot not implemented for this platform".to_string(),
+        ))
     }
 }

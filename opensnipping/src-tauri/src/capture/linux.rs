@@ -3,10 +3,11 @@
 // This module integrates with the Freedesktop portal for screen capture
 // on Linux (Wayland and X11).
 
-use crate::capture::{CaptureBackendError, SelectionResult};
+use crate::capture::{CaptureBackendError, ScreenshotResult, SelectionResult};
 use crate::config::{CaptureConfig, CaptureSource};
 use ashpd::desktop::screencast::{CursorMode, Screencast, SourceType};
 use ashpd::desktop::PersistMode;
+use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::{debug, error, info};
@@ -160,6 +161,17 @@ impl super::CaptureBackend for LinuxCaptureBackend {
         let mut session_lock = self.session.lock().await;
         *session_lock = None;
         Ok(())
+    }
+
+    async fn capture_screenshot(
+        &self,
+        _selection: &SelectionResult,
+        _output_path: &Path,
+    ) -> Result<ScreenshotResult, CaptureBackendError> {
+        // TODO: Implement GStreamer pipeline in task 13e
+        Err(CaptureBackendError::NotSupported(
+            "Screenshot capture not yet implemented".to_string(),
+        ))
     }
 }
 
