@@ -190,18 +190,19 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
 ### Milestone 3 — Screenshot MVP (1 day)
 
 **Decisions made:**
-- Frame capture: `pipewire-rs` + `image` crate (lightweight, unify with GStreamer in M4 if needed)
+- Frame capture: **GStreamer** with `pipewiresrc` → `pngenc` pipeline (same stack as recording; works with any system PipeWire version)
 - State: UI-only annotation (backend captures, React manages drawing state)
 - Transfer: temp file path via Tauri asset protocol (efficient for large images)
+- Dependencies: GStreamer as **runtime dependency** (pre-installed on Ubuntu desktops; declared in `.deb` packaging)
 
 #### 3.1 Backend: Dependencies & Contract
-- [ ] 13a. Add Rust dependencies to `Cargo.toml`: `pipewire = "0.8"`, `image = "0.25"`, `uuid = { version = "1", features = ["v4"] }`
+- [ ] 13a. Add Rust dependencies to `Cargo.toml`: `gstreamer = "0.23"`, `gstreamer-app = "0.23"`, `gstreamer-video = "0.23"`, `uuid = { version = "1", features = ["v4"] }`
 - [ ] 13b. Extend `CaptureBackend` trait in `capture/mod.rs`: add `capture_screenshot(&self, selection: &SelectionResult, output_path: &Path) -> Result<ScreenshotResult, CaptureBackendError>` with `ScreenshotResult { path, width, height }`
 - [ ] 13c. Add `ScreenshotCompleteEvent` in `events.rs`: `capture:screenshot_complete` with `{ path, width, height }`
 - [ ] 13d. Add matching TS types in `types.ts`: `EVENT_SCREENSHOT_COMPLETE`, `ScreenshotCompleteEvent`
 
 #### 3.2 Backend: Linux Implementation
-- [ ] 13e. Implement `capture_screenshot` in `capture/linux.rs`: connect to PipeWire stream via `node_id`, grab single frame buffer (BGRA), encode PNG via `image::save_buffer()`, cleanup stream
+- [ ] 13e. Implement `capture_screenshot` in `capture/linux.rs`: build GStreamer pipeline `pipewiresrc path={node_id} ! videoconvert ! pngenc ! filesink location={output_path}`, run to EOS, cleanup
 - [ ] 13f. Implement `capture_screenshot` stub in `capture/fake.rs`: generate placeholder PNG (solid color) for contract tests
 - [ ] 13g. Add `take_screenshot` Tauri command in `lib.rs`: call `request_selection()` → `capture_screenshot()` → emit `screenshot_complete` event; output to `/tmp/opensnipping-{uuid}.png`
 
@@ -306,7 +307,8 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
    - (optional) Linux integration tests behind a separate job and/or feature flag
 - [ ] 37. Packaging:
    - `deb` + AppImage
-   - document dependencies (GStreamer plugins)
+   - Declare GStreamer runtime dependencies in `.deb`: `gstreamer1.0-pipewire`, `gstreamer1.0-plugins-good`, `gstreamer1.0-plugins-base`
+   - Document dependency installation for AppImage users
 
 **Done when**: installable builds exist; long recordings are stable.
 
@@ -338,8 +340,7 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
 - **Wayland capture**: must go through portal/PipeWire. Mitigation: portal-first design.
 - **Audio routing differences**: system audio capture varies by distro. Mitigation: portal audio preferred; fallback strategies.
 - **Pause/Resume correctness**: pipelines may not “pause” cleanly for MP4. Mitigation: test early; use MKV for pause robustness if needed.
-- **GStreamer plugin availability**: encoders/muxers differ by install. Mitigation: dependency checks + clear error messages.
-
+- **GStreamer plugin availability**: encoders/muxers differ by install. Mitigation: dependency checks + clear error messages.- **pipewire-rs version compatibility**: The `pipewire-rs` crate has compile-time compatibility issues with Ubuntu 22.04's PipeWire 0.3.48 headers (`libspa` type mismatches). Mitigation: use GStreamer's `pipewiresrc` instead, which works with any system PipeWire version and is already needed for recording.
 ---
 
 ## 7) Next Action (If you want me to proceed)
