@@ -161,6 +161,11 @@ Keep the description lowercase, imperative, and under 50 characters.
 
 - Commit and push without asking for approval, but only when the commit is logically cohesive, compiled and at least minimally verified by simple tests or manual checks.
 
+**Scope your commits:** Only commit files you changed in your session. Other agents may work in parallel, leaving unrelated changes in the working tree.
+- Before committing, run `git status` and review which files are modified
+- Explicitly stage only files relevant to your task (e.g., `git add file1 file2`) instead of `git add -A`
+- If you see unexpected changes or are unsure whether a file is yours, ask the human before committing
+
 **Commit quality evidence:** Existing tests passing is necessary but NOT sufficient. Before committing, explicitly state the evidence that the new code is correct:
 - **New test added**: A test that exercises the new code path and passes
 - **Contract-only change**: Type/event additions with no runtime behavior (harmless until wired)
@@ -168,6 +173,10 @@ Keep the description lowercase, imperative, and under 50 characters.
 - **Manual verification**: Specific steps performed and observed results
 
 Always include a brief rationale in the commit workflow (e.g., "Tests pass; new `capture_screenshot` method is interface-only, no callers yet").
+
+**Human verification decision flow:**
+- If you can verify correctness yourself (tests pass, contract-only, logic is deterministic) → commit and push
+- If the change requires visual/UX verification you cannot perform → ask human first with verification steps, then commit after confirmation
 
 ## Parallel Work & Agent Delegation
 

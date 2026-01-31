@@ -85,7 +85,11 @@ Report back: [what info to return when complete]
 
 - One logical change per commit
 - Commit message format: `[category]: brief description`
-- Commit and push without asking for approval, but only when the commit is logically cohesive, compiled and at least minimally verified by simple tests or manual checks.
 - Never force push to main
+- Only commit files you changed—check `git status` and stage explicitly, not `git add -A`
 
-See **Commit quality evidence** in [copilot-instructions.md](../copilot-instructions.md#commit-and-push-policy) for required evidence types before committing.
+**When to commit autonomously vs ask human:**
+- Confident (tests pass, contract-only, deterministic logic) → commit and push without asking
+- Requires UX/visual verification you cannot do → provide verification steps, wait for human confirmation, then commit
+
+See **Commit quality evidence** and **Human verification decision flow** in [copilot-instructions.md](../copilot-instructions.md#commit-and-push-policy) for details.
