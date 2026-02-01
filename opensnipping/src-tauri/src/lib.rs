@@ -6,9 +6,9 @@ pub mod state;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter};
 
-use capture::{CaptureBackend, CaptureBackendError, ScreenshotResult, SelectionResult};
+use capture::{CaptureBackend, CaptureBackendError, RecordingResult, ScreenshotResult, SelectionResult};
 use config::CaptureConfig;
-use events::{event_names, ErrorEvent, ScreenshotCompleteEvent, SelectionCompleteEvent, StateChangedEvent};
+use events::{event_names, ErrorEvent, RecordingStartedEvent, RecordingStoppedEvent, ScreenshotCompleteEvent, SelectionCompleteEvent, StateChangedEvent};
 use state::{CaptureError, CaptureState, ErrorCode, StateMachine};
 use std::path::PathBuf;
 use tracing::info;
@@ -28,6 +28,9 @@ pub struct AppState {
     pub config: Mutex<Option<CaptureConfig>>,
     /// Result from portal selection (PipeWire node info)
     pub selection: Mutex<Option<SelectionResult>>,
+    /// Active backend instance for recording
+    #[cfg(target_os = "linux")]
+    pub backend: tokio::sync::Mutex<Option<capture::linux::LinuxCaptureBackend>>,
 }
 
 impl Default for AppState {
@@ -36,6 +39,8 @@ impl Default for AppState {
             state_machine: Mutex::new(StateMachine::new()),
             config: Mutex::new(None),
             selection: Mutex::new(None),
+            #[cfg(target_os = "linux")]
+            backend: tokio::sync::Mutex::new(None),
         }
     }
 }
@@ -353,6 +358,139 @@ async fn take_screenshot(
     }
 }
 
+/// Start video recording with the current selection
+#[tauri::command]
+#[cfg(target_os = "linux")]
+async fn start_recording_video(
+    app: AppHandle,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    info!("Starting video recording...");
+
+    // Get stored config and selection
+    let config = state.config.lock().unwrap().clone().ok_or_else(|| {
+        "No capture config set. Call start_capture first.".to_string()
+    })?;
+
+    let selection = state.selection.lock().unwrap().clone().ok_or_else(|| {
+        "No selection available. Call start_capture first.".to_string()
+    })?;
+
+    // Create and store backend instance
+    let backend = capture::linux::LinuxCaptureBackend::new();
+
+    // Start recording
+    match backend.start_recording(&selection, &config).await {
+        Ok(()) => {
+            info!("Recording started: {}", config.output_path);
+
+            // Store backend for later stop
+            let mut backend_lock = state.backend.lock().await;
+            *backend_lock = Some(backend);
+
+            // Emit recording started event
+            let _ = app.emit(
+                event_names::RECORDING_STARTED,
+                RecordingStartedEvent {
+                    output_path: config.output_path.clone(),
+                },
+            );
+
+            Ok(())
+        }
+        Err(backend_err) => {
+            info!("Recording start failed: {:?}", backend_err);
+            let error = backend_error_to_capture_error(&backend_err);
+            emit_error(&app, &error);
+            Err(error.message)
+        }
+    }
+}
+
+/// Stop video recording and finalize the output file
+#[tauri::command]
+#[cfg(target_os = "linux")]
+async fn stop_recording_video(
+    app: AppHandle,
+    state: tauri::State<'_, AppState>,
+) -> Result<RecordingResult, String> {
+    info!("Stopping video recording...");
+
+    // Take backend from storage
+    let backend = {
+        let mut backend_lock = state.backend.lock().await;
+        backend_lock.take().ok_or_else(|| {
+            "No recording in progress".to_string()
+        })?
+    };
+
+    // Stop recording
+    match backend.stop_recording().await {
+        Ok(result) => {
+            info!(
+                "Recording stopped: {} ({} ms)",
+                result.path, result.duration_ms
+            );
+
+            // Transition state to Finalizing then Idle
+            {
+                let mut sm = state.state_machine.lock().unwrap();
+                let previous = sm.state();
+                if let Ok(finalizing) = sm.stop() {
+                    emit_state_change(&app, previous, finalizing);
+                    let previous_finalizing = finalizing;
+                    if let Ok(idle) = sm.finalize_complete() {
+                        emit_state_change(&app, previous_finalizing, idle);
+                    }
+                }
+            }
+
+            // Clear config and selection
+            *state.config.lock().unwrap() = None;
+            *state.selection.lock().unwrap() = None;
+
+            // Emit recording stopped event
+            let _ = app.emit(
+                event_names::RECORDING_STOPPED,
+                RecordingStoppedEvent {
+                    path: result.path.clone(),
+                    duration_ms: result.duration_ms,
+                    width: result.width,
+                    height: result.height,
+                },
+            );
+
+            Ok(result)
+        }
+        Err(backend_err) => {
+            info!("Recording stop failed: {:?}", backend_err);
+            let error = backend_error_to_capture_error(&backend_err);
+            emit_error(&app, &error);
+            Err(error.message)
+        }
+    }
+}
+
+/// Stub for non-Linux platforms
+#[tauri::command]
+#[cfg(not(target_os = "linux"))]
+async fn start_recording_video(
+    _app: AppHandle,
+    _state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    Err("Recording not implemented for this platform".to_string())
+}
+
+/// Stub for non-Linux platforms
+#[tauri::command]
+#[cfg(not(target_os = "linux"))]
+async fn stop_recording_video(
+    _app: AppHandle,
+    _state: tauri::State<'_, AppState>,
+) -> Result<RecordingResult, String> {
+    Err("Recording not implemented for this platform".to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -370,6 +508,8 @@ pub fn run() {
             finalize_complete,
             reset_error,
             take_screenshot,
+            start_recording_video,
+            stop_recording_video,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
