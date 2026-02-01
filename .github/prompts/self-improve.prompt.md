@@ -49,3 +49,32 @@ Update the appropriate file:
 - Behavioral preference → `copilot-instructions.md`
 - Agent-specific → relevant `.agent.md`
 - Procedural → convert to skill if reusable
+
+### Syncing Shareable Improvements
+
+If you modified shareable content (agents, prompts, or skills that exist in `~/skills/`):
+
+1. **Copy changes to source repo**:
+   ```bash
+   # For agents
+   cp .github/agents/<name>.agent.md ~/skills/agents/
+   
+   # For prompts
+   cp .github/prompts/<name>.prompt.md ~/skills/prompts/
+   
+   # For skills (if shareable)
+   cp -r .github/skills/<name>/ ~/skills/skills/
+   ```
+
+2. **Commit and push to ~/skills**:
+   ```bash
+   cd ~/skills
+   git add .
+   git diff --staged  # Review changes
+   git commit -m "agent: <describe improvement>"
+   git push
+   ```
+
+3. **Confirm with user** before pushing
+
+This ensures improvements benefit all repos using b1tank/skills.
