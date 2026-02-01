@@ -143,6 +143,34 @@ impl RecordingPipeline {
         Ok(())
     }
 
+    /// Pause the recording pipeline
+    ///
+    /// Sets the pipeline to PAUSED state. Can be resumed with `resume()`.
+    pub fn pause(&self) -> Result<(), CaptureBackendError> {
+        info!("Pausing recording pipeline");
+
+        self.pipeline.set_state(gstreamer::State::Paused).map_err(|e| {
+            CaptureBackendError::Internal(format!("Failed to pause pipeline: {}", e))
+        })?;
+
+        debug!("Recording pipeline paused");
+        Ok(())
+    }
+
+    /// Resume a paused recording pipeline
+    ///
+    /// Sets the pipeline back to PLAYING state after `pause()` was called.
+    pub fn resume(&self) -> Result<(), CaptureBackendError> {
+        info!("Resuming recording pipeline");
+
+        self.pipeline.set_state(gstreamer::State::Playing).map_err(|e| {
+            CaptureBackendError::Internal(format!("Failed to resume pipeline: {}", e))
+        })?;
+
+        debug!("Recording pipeline resumed");
+        Ok(())
+    }
+
     /// Stop recording and finalize output file
     ///
     /// Sends EOS to pipeline, waits for finalization, and returns the recording result.
@@ -624,6 +652,28 @@ impl super::CaptureBackend for LinuxCaptureBackend {
         );
 
         Ok(result)
+    }
+
+    async fn pause_recording(&self) -> Result<(), CaptureBackendError> {
+        info!("Pausing recording");
+
+        let recording_lock = self.recording.lock().await;
+        let pipeline = recording_lock.as_ref().ok_or_else(|| {
+            CaptureBackendError::Internal("No recording in progress".to_string())
+        })?;
+
+        pipeline.pause()
+    }
+
+    async fn resume_recording(&self) -> Result<(), CaptureBackendError> {
+        info!("Resuming recording");
+
+        let recording_lock = self.recording.lock().await;
+        let pipeline = recording_lock.as_ref().ok_or_else(|| {
+            CaptureBackendError::Internal("No recording in progress".to_string())
+        })?;
+
+        pipeline.resume()
     }
 }
 

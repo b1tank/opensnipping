@@ -251,7 +251,7 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
 - [x] 17. Implement Start/Stop end-to-end, producing playable files.
 
 #### 4.3 Pause/Resume
-- [ ] 18. Implement Pause/Resume:
+- [x] 18. Implement Pause/Resume:
    - simplest: pause the pipeline / block dataflow (verify output correctness)
    - fallback if pause is hard: implement “segmented recording” and concat (only if necessary)
 - [ ] 19. Add tests:

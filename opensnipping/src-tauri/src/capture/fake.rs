@@ -25,6 +25,8 @@ pub struct FakeCaptureBackend {
     cancel_count: Arc<AtomicU32>,
     /// Whether recording is in progress
     is_recording: Arc<AtomicBool>,
+    /// Whether recording is paused
+    is_paused: Arc<AtomicBool>,
     /// Recording start time (for duration calculation)
     recording_start: Arc<std::sync::Mutex<Option<std::time::Instant>>>,
     /// Output path for fake recording
@@ -33,6 +35,10 @@ pub struct FakeCaptureBackend {
     start_recording_count: Arc<AtomicU32>,
     /// Count of stop_recording calls
     stop_recording_count: Arc<AtomicU32>,
+    /// Count of pause_recording calls
+    pause_recording_count: Arc<AtomicU32>,
+    /// Count of resume_recording calls
+    resume_recording_count: Arc<AtomicU32>,
 }
 
 #[derive(Debug, Clone)]
@@ -57,10 +63,13 @@ impl FakeCaptureBackend {
             selection_count: Arc::new(AtomicU32::new(0)),
             cancel_count: Arc::new(AtomicU32::new(0)),
             is_recording: Arc::new(AtomicBool::new(false)),
+            is_paused: Arc::new(AtomicBool::new(false)),
             recording_start: Arc::new(std::sync::Mutex::new(None)),
             recording_output_path: Arc::new(std::sync::Mutex::new(None)),
             start_recording_count: Arc::new(AtomicU32::new(0)),
             stop_recording_count: Arc::new(AtomicU32::new(0)),
+            pause_recording_count: Arc::new(AtomicU32::new(0)),
+            resume_recording_count: Arc::new(AtomicU32::new(0)),
         }
     }
 
@@ -117,9 +126,24 @@ impl FakeCaptureBackend {
         self.stop_recording_count.load(Ordering::SeqCst)
     }
 
+    /// Get count of pause_recording calls
+    pub fn pause_recording_count(&self) -> u32 {
+        self.pause_recording_count.load(Ordering::SeqCst)
+    }
+
+    /// Get count of resume_recording calls
+    pub fn resume_recording_count(&self) -> u32 {
+        self.resume_recording_count.load(Ordering::SeqCst)
+    }
+
     /// Check if currently recording
     pub fn is_recording(&self) -> bool {
         self.is_recording.load(Ordering::SeqCst)
+    }
+
+    /// Check if recording is paused
+    pub fn is_paused(&self) -> bool {
+        self.is_paused.load(Ordering::SeqCst)
     }
 }
 
@@ -263,6 +287,7 @@ impl CaptureBackend for FakeCaptureBackend {
 
         // Reset recording state
         self.is_recording.store(false, Ordering::SeqCst);
+        self.is_paused.store(false, Ordering::SeqCst);
         *self.recording_start.lock().unwrap() = None;
 
         Ok(RecordingResult {
@@ -271,6 +296,44 @@ impl CaptureBackend for FakeCaptureBackend {
             width: 1920,
             height: 1080,
         })
+    }
+
+    async fn pause_recording(&self) -> Result<(), CaptureBackendError> {
+        self.pause_recording_count.fetch_add(1, Ordering::SeqCst);
+
+        if !self.is_recording.load(Ordering::SeqCst) {
+            return Err(CaptureBackendError::Internal(
+                "No recording in progress".to_string(),
+            ));
+        }
+
+        if self.is_paused.load(Ordering::SeqCst) {
+            return Err(CaptureBackendError::Internal(
+                "Recording is already paused".to_string(),
+            ));
+        }
+
+        self.is_paused.store(true, Ordering::SeqCst);
+        Ok(())
+    }
+
+    async fn resume_recording(&self) -> Result<(), CaptureBackendError> {
+        self.resume_recording_count.fetch_add(1, Ordering::SeqCst);
+
+        if !self.is_recording.load(Ordering::SeqCst) {
+            return Err(CaptureBackendError::Internal(
+                "No recording in progress".to_string(),
+            ));
+        }
+
+        if !self.is_paused.load(Ordering::SeqCst) {
+            return Err(CaptureBackendError::Internal(
+                "Recording is not paused".to_string(),
+            ));
+        }
+
+        self.is_paused.store(false, Ordering::SeqCst);
+        Ok(())
     }
 }
 
@@ -645,5 +708,160 @@ mod tests {
         // Verify counts
         assert_eq!(backend.start_recording_count(), 1);
         assert_eq!(backend.stop_recording_count(), 1);
+    }
+
+    // Pause/Resume tests
+
+    #[tokio::test]
+    async fn test_fake_backend_pause_recording_succeeds() {
+        let backend = FakeCaptureBackend::succeeding();
+        let config = test_config();
+        let selection = SelectionResult {
+            node_id: 42,
+            stream_fd: None,
+            width: Some(1920),
+            height: Some(1080),
+        };
+
+        // Start recording first
+        backend.start_recording(&selection, &config).await.unwrap();
+        assert!(backend.is_recording());
+        assert!(!backend.is_paused());
+
+        // Pause recording
+        let result = backend.pause_recording().await;
+        assert!(result.is_ok());
+        assert!(backend.is_recording());
+        assert!(backend.is_paused());
+        assert_eq!(backend.pause_recording_count(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_fake_backend_pause_recording_fails_if_not_recording() {
+        let backend = FakeCaptureBackend::succeeding();
+
+        let result = backend.pause_recording().await;
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            CaptureBackendError::Internal(_)
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_fake_backend_pause_recording_fails_if_already_paused() {
+        let backend = FakeCaptureBackend::succeeding();
+        let config = test_config();
+        let selection = SelectionResult {
+            node_id: 42,
+            stream_fd: None,
+            width: Some(1920),
+            height: Some(1080),
+        };
+
+        // Start and pause
+        backend.start_recording(&selection, &config).await.unwrap();
+        backend.pause_recording().await.unwrap();
+
+        // Second pause fails
+        let result = backend.pause_recording().await;
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            CaptureBackendError::Internal(_)
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_fake_backend_resume_recording_succeeds() {
+        let backend = FakeCaptureBackend::succeeding();
+        let config = test_config();
+        let selection = SelectionResult {
+            node_id: 42,
+            stream_fd: None,
+            width: Some(1920),
+            height: Some(1080),
+        };
+
+        // Start, pause, then resume
+        backend.start_recording(&selection, &config).await.unwrap();
+        backend.pause_recording().await.unwrap();
+        assert!(backend.is_paused());
+
+        let result = backend.resume_recording().await;
+        assert!(result.is_ok());
+        assert!(backend.is_recording());
+        assert!(!backend.is_paused());
+        assert_eq!(backend.resume_recording_count(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_fake_backend_resume_recording_fails_if_not_recording() {
+        let backend = FakeCaptureBackend::succeeding();
+
+        let result = backend.resume_recording().await;
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            CaptureBackendError::Internal(_)
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_fake_backend_resume_recording_fails_if_not_paused() {
+        let backend = FakeCaptureBackend::succeeding();
+        let config = test_config();
+        let selection = SelectionResult {
+            node_id: 42,
+            stream_fd: None,
+            width: Some(1920),
+            height: Some(1080),
+        };
+
+        // Start recording but don't pause
+        backend.start_recording(&selection, &config).await.unwrap();
+
+        let result = backend.resume_recording().await;
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            CaptureBackendError::Internal(_)
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_fake_backend_full_recording_with_pause_flow() {
+        let backend = FakeCaptureBackend::succeeding();
+        let config = test_config();
+
+        // Step 1: Selection
+        let selection = backend.request_selection(&config).await.unwrap();
+
+        // Step 2: Start recording
+        backend.start_recording(&selection, &config).await.unwrap();
+        assert!(backend.is_recording());
+        assert!(!backend.is_paused());
+
+        // Step 3: Pause
+        backend.pause_recording().await.unwrap();
+        assert!(backend.is_recording());
+        assert!(backend.is_paused());
+
+        // Step 4: Resume
+        backend.resume_recording().await.unwrap();
+        assert!(backend.is_recording());
+        assert!(!backend.is_paused());
+
+        // Step 5: Stop
+        let result = backend.stop_recording().await.unwrap();
+        assert!(!backend.is_recording());
+        assert!(!backend.is_paused());
+
+        // Verify counts
+        assert_eq!(backend.start_recording_count(), 1);
+        assert_eq!(backend.pause_recording_count(), 1);
+        assert_eq!(backend.resume_recording_count(), 1);
+        assert_eq!(backend.stop_recording_count(), 1);
+        assert_eq!(result.path, config.output_path);
     }
 }

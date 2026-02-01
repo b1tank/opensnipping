@@ -123,6 +123,20 @@ pub trait CaptureBackend: Send + Sync {
     fn stop_recording(
         &self,
     ) -> impl std::future::Future<Output = Result<RecordingResult, CaptureBackendError>> + Send;
+
+    /// Pause the current recording
+    ///
+    /// Pauses the GStreamer pipeline. Can be resumed with resume_recording.
+    fn pause_recording(
+        &self,
+    ) -> impl std::future::Future<Output = Result<(), CaptureBackendError>> + Send;
+
+    /// Resume a paused recording
+    ///
+    /// Resumes the GStreamer pipeline after pause_recording was called.
+    fn resume_recording(
+        &self,
+    ) -> impl std::future::Future<Output = Result<(), CaptureBackendError>> + Send;
 }
 
 /// Get the appropriate capture backend for the current platform
@@ -178,6 +192,18 @@ impl CaptureBackend for StubBackend {
     }
 
     async fn stop_recording(&self) -> Result<RecordingResult, CaptureBackendError> {
+        Err(CaptureBackendError::NotSupported(
+            "Recording not implemented for this platform".to_string(),
+        ))
+    }
+
+    async fn pause_recording(&self) -> Result<(), CaptureBackendError> {
+        Err(CaptureBackendError::NotSupported(
+            "Recording not implemented for this platform".to_string(),
+        ))
+    }
+
+    async fn resume_recording(&self) -> Result<(), CaptureBackendError> {
         Err(CaptureBackendError::NotSupported(
             "Recording not implemented for this platform".to_string(),
         ))

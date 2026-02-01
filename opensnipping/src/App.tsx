@@ -118,6 +118,7 @@ function App() {
   async function handlePauseRecording() {
     try {
       await invoke("pause_recording");
+      await invoke("pause_recording_video");
     } catch (e) {
       setError(String(e));
     }
@@ -126,6 +127,7 @@ function App() {
   async function handleResumeRecording() {
     try {
       await invoke("resume_recording");
+      await invoke("resume_recording_video");
     } catch (e) {
       setError(String(e));
     }

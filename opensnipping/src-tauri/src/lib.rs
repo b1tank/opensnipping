@@ -242,6 +242,60 @@ fn resume_recording(app: AppHandle, state: tauri::State<AppState>) -> Result<Cap
     }
 }
 
+/// Pause the GStreamer recording pipeline
+#[tauri::command]
+#[cfg(target_os = "linux")]
+async fn pause_recording_video(
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    info!("Pausing video recording...");
+
+    let backend_lock = state.backend.lock().await;
+    let backend = backend_lock.as_ref().ok_or_else(|| {
+        "No recording in progress".to_string()
+    })?;
+
+    backend.pause_recording().await.map_err(|e| {
+        format!("Failed to pause recording: {}", e)
+    })
+}
+
+/// Resume the GStreamer recording pipeline
+#[tauri::command]
+#[cfg(target_os = "linux")]
+async fn resume_recording_video(
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    info!("Resuming video recording...");
+
+    let backend_lock = state.backend.lock().await;
+    let backend = backend_lock.as_ref().ok_or_else(|| {
+        "No recording in progress".to_string()
+    })?;
+
+    backend.resume_recording().await.map_err(|e| {
+        format!("Failed to resume recording: {}", e)
+    })
+}
+
+/// Stub for non-Linux platforms
+#[tauri::command]
+#[cfg(not(target_os = "linux"))]
+async fn pause_recording_video(
+    _state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    Err("Recording not implemented for this platform".to_string())
+}
+
+/// Stub for non-Linux platforms
+#[tauri::command]
+#[cfg(not(target_os = "linux"))]
+async fn resume_recording_video(
+    _state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    Err("Recording not implemented for this platform".to_string())
+}
+
 #[tauri::command]
 fn stop_recording(app: AppHandle, state: tauri::State<AppState>) -> Result<CaptureState, String> {
     let mut sm = state.state_machine.lock().unwrap();
@@ -510,6 +564,8 @@ pub fn run() {
             take_screenshot,
             start_recording_video,
             stop_recording_video,
+            pause_recording_video,
+            resume_recording_video,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
