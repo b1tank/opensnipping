@@ -139,7 +139,7 @@ Classify all work before starting to maintain atomic commits:
 | `refactor` | Code restructure without behavior change         | Medium |
 | `test`     | Adding or updating tests                         | Low-Medium |
 | `chore`    | Build, CI, config, or maintenance tasks          | Low |
-| `agent`    | Improving agent instructions or prompts          | Low |
+| `agent`    | Agent/copilot instructions, prompts, AGENTS.md, CLAUDE.md | Low |
 
 ## Plan Management & Task Decomposition
 
@@ -182,6 +182,8 @@ Examples:
 - `agent: clarify commit message conventions`
 
 Keep descriptions lowercase, imperative, under 50 characters.
+
+**Always use `agent:` prefix** for changes to agent instructions (`.github/agents/`, `.github/prompts/`, `.github/skills/`, `copilot-instructions.md`, `AGENTS.md`, `CLAUDE.md`).
 
 ## Commit and Push Policy
 
