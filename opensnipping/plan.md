@@ -248,7 +248,7 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
 - [x] 16j. Add unit tests for encoder/muxer selection
 
 #### 4.2 Start/Stop End-to-End
-- [ ] 17. Implement Start/Stop end-to-end, producing playable files.
+- [x] 17. Implement Start/Stop end-to-end, producing playable files.
 
 #### 4.3 Pause/Resume
 - [ ] 18. Implement Pause/Resume:

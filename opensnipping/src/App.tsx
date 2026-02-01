@@ -8,10 +8,14 @@ import {
   ErrorEvent,
   SelectionCompleteEvent,
   ScreenshotCompleteEvent,
+  RecordingStartedEvent,
+  RecordingStoppedEvent,
   EVENT_STATE_CHANGED,
   EVENT_ERROR,
   EVENT_SELECTION_COMPLETE,
   EVENT_SCREENSHOT_COMPLETE,
+  EVENT_RECORDING_STARTED,
+  EVENT_RECORDING_STOPPED,
 } from "./types";
 import { AnnotationCanvas } from "./components/AnnotationCanvas";
 
@@ -24,6 +28,7 @@ function App() {
   const [pingResult, setPingResult] = useState<string>("");
   const [screenshotPath, setScreenshotPath] = useState<string | null>(null);
   const [isCapturingScreenshot, setIsCapturingScreenshot] = useState(false);
+  const [recordingPath, setRecordingPath] = useState<string | null>(null);
 
   // Listen to Rust events
   useEffect(() => {
@@ -54,6 +59,19 @@ function App() {
       setIsCapturingScreenshot(false);
     }).then((unlisten) => unlisteners.push(unlisten));
 
+    // Listen for recording started
+    listen<RecordingStartedEvent>(EVENT_RECORDING_STARTED, (event) => {
+      console.log("Recording started:", event.payload.output_path);
+      setRecordingPath(event.payload.output_path);
+    }).then((unlisten) => unlisteners.push(unlisten));
+
+    // Listen for recording stopped
+    listen<RecordingStoppedEvent>(EVENT_RECORDING_STOPPED, (event) => {
+      console.log("Recording stopped:", event.payload);
+      setRecordingPath(null);
+      alert(`Recording saved to: ${event.payload.path}\nDuration: ${Math.round(event.payload.duration_ms / 1000)}s`);
+    }).then((unlisten) => unlisteners.push(unlisten));
+
     // Fetch initial state
     invoke<CaptureState>("get_state").then(setCaptureState);
 
@@ -73,16 +91,25 @@ function App() {
 
   async function handleStartCapture() {
     try {
-      await invoke("start_capture", {
+      // Generate unique output path
+      const outputPath = `/tmp/opensnipping-${Date.now()}.mp4`;
+      
+      // First, start capture (shows portal picker, gets selection)
+      const newState = await invoke<CaptureState>("start_capture", {
         config: {
           source: "screen",
           fps: 30,
           include_cursor: true,
           audio: { system: false, mic: false },
           container: "mp4",
-          output_path: "/tmp/recording.mp4",
+          output_path: outputPath,
         },
       });
+      
+      // If portal selection succeeded (state is now Recording), start actual video recording
+      if (newState === "recording") {
+        await invoke("start_recording_video");
+      }
     } catch (e) {
       setError(String(e));
     }
@@ -106,7 +133,8 @@ function App() {
 
   async function handleStopRecording() {
     try {
-      await invoke("stop_recording");
+      // Stop actual video recording (this also transitions state)
+      await invoke("stop_recording_video");
     } catch (e) {
       setError(String(e));
     }
@@ -228,6 +256,9 @@ function App() {
         )}
         {captureState === "recording" && (
           <>
+            {recordingPath && (
+              <p className="recording-info">Recording to: {recordingPath}</p>
+            )}
             <button onClick={handlePauseRecording} className="btn">
               Pause
             </button>
