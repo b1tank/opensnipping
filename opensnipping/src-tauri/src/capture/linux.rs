@@ -605,10 +605,25 @@ impl super::CaptureBackend for LinuxCaptureBackend {
     }
 
     async fn stop_recording(&self) -> Result<RecordingResult, CaptureBackendError> {
-        // TODO: Implement in 16g
-        Err(CaptureBackendError::NotSupported(
-            "Recording not yet implemented".to_string(),
-        ))
+        info!("Stopping recording");
+
+        // Take the recording pipeline from storage
+        let mut pipeline = {
+            let mut recording_lock = self.recording.lock().await;
+            recording_lock.take().ok_or_else(|| {
+                CaptureBackendError::Internal("No recording in progress".to_string())
+            })?
+        };
+
+        // Stop the pipeline and get the result
+        let result = pipeline.stop()?;
+
+        info!(
+            "Recording stopped: {} ({} ms)",
+            result.path, result.duration_ms
+        );
+
+        Ok(result)
     }
 }
 
