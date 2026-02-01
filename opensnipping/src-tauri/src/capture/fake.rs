@@ -23,6 +23,16 @@ pub struct FakeCaptureBackend {
     selection_count: Arc<AtomicU32>,
     /// Count of cancel requests
     cancel_count: Arc<AtomicU32>,
+    /// Whether recording is in progress
+    is_recording: Arc<AtomicBool>,
+    /// Recording start time (for duration calculation)
+    recording_start: Arc<std::sync::Mutex<Option<std::time::Instant>>>,
+    /// Output path for fake recording
+    recording_output_path: Arc<std::sync::Mutex<Option<String>>>,
+    /// Count of start_recording calls
+    start_recording_count: Arc<AtomicU32>,
+    /// Count of stop_recording calls
+    stop_recording_count: Arc<AtomicU32>,
 }
 
 #[derive(Debug, Clone)]
@@ -46,6 +56,11 @@ impl FakeCaptureBackend {
             fake_node_id: Arc::new(AtomicU32::new(42)),
             selection_count: Arc::new(AtomicU32::new(0)),
             cancel_count: Arc::new(AtomicU32::new(0)),
+            is_recording: Arc::new(AtomicBool::new(false)),
+            recording_start: Arc::new(std::sync::Mutex::new(None)),
+            recording_output_path: Arc::new(std::sync::Mutex::new(None)),
+            start_recording_count: Arc::new(AtomicU32::new(0)),
+            stop_recording_count: Arc::new(AtomicU32::new(0)),
         }
     }
 
@@ -90,6 +105,21 @@ impl FakeCaptureBackend {
     /// Get count of cancel requests
     pub fn cancel_count(&self) -> u32 {
         self.cancel_count.load(Ordering::SeqCst)
+    }
+
+    /// Get count of start_recording calls
+    pub fn start_recording_count(&self) -> u32 {
+        self.start_recording_count.load(Ordering::SeqCst)
+    }
+
+    /// Get count of stop_recording calls
+    pub fn stop_recording_count(&self) -> u32 {
+        self.stop_recording_count.load(Ordering::SeqCst)
+    }
+
+    /// Check if currently recording
+    pub fn is_recording(&self) -> bool {
+        self.is_recording.load(Ordering::SeqCst)
     }
 }
 
@@ -170,20 +200,77 @@ impl CaptureBackend for FakeCaptureBackend {
 
     async fn start_recording(
         &self,
-        _selection: &SelectionResult,
-        _config: &CaptureConfig,
+        selection: &SelectionResult,
+        config: &CaptureConfig,
     ) -> Result<(), CaptureBackendError> {
-        // TODO: Implement in 16i
-        Err(CaptureBackendError::NotSupported(
-            "Recording not yet implemented in fake backend".to_string(),
-        ))
+        self.start_recording_count.fetch_add(1, Ordering::SeqCst);
+
+        if !self.should_succeed.load(Ordering::SeqCst) {
+            let error = self.error_type.lock().unwrap().clone();
+            return Err(match error {
+                FakeError::PermissionDenied => {
+                    CaptureBackendError::PermissionDenied("Recording permission denied".to_string())
+                }
+                FakeError::PortalError => {
+                    CaptureBackendError::PortalError("Recording portal error".to_string())
+                }
+                FakeError::NoSource => {
+                    CaptureBackendError::NoSourceAvailable("No source for recording".to_string())
+                }
+            });
+        }
+
+        if self.is_recording.load(Ordering::SeqCst) {
+            return Err(CaptureBackendError::Internal(
+                "Recording already in progress".to_string(),
+            ));
+        }
+
+        // Store recording state
+        self.is_recording.store(true, Ordering::SeqCst);
+        *self.recording_start.lock().unwrap() = Some(std::time::Instant::now());
+        *self.recording_output_path.lock().unwrap() = Some(config.output_path.clone());
+
+        // Store dimensions for later use (we don't actually record, just track state)
+        let _ = selection; // acknowledge we received it
+
+        Ok(())
     }
 
     async fn stop_recording(&self) -> Result<RecordingResult, CaptureBackendError> {
-        // TODO: Implement in 16i
-        Err(CaptureBackendError::NotSupported(
-            "Recording not yet implemented in fake backend".to_string(),
-        ))
+        self.stop_recording_count.fetch_add(1, Ordering::SeqCst);
+
+        if !self.is_recording.load(Ordering::SeqCst) {
+            return Err(CaptureBackendError::Internal(
+                "No recording in progress".to_string(),
+            ));
+        }
+
+        // Calculate duration
+        let duration_ms = self
+            .recording_start
+            .lock()
+            .unwrap()
+            .map(|t| t.elapsed().as_millis() as u64)
+            .unwrap_or(0);
+
+        let output_path = self
+            .recording_output_path
+            .lock()
+            .unwrap()
+            .take()
+            .unwrap_or_else(|| "/tmp/fake_recording.mp4".to_string());
+
+        // Reset recording state
+        self.is_recording.store(false, Ordering::SeqCst);
+        *self.recording_start.lock().unwrap() = None;
+
+        Ok(RecordingResult {
+            path: output_path,
+            duration_ms,
+            width: 1920,
+            height: 1080,
+        })
     }
 }
 

@@ -244,7 +244,7 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
 - [x] 16f. Implement `start_recording` in `LinuxCaptureBackend`
 - [x] 16g. Implement `stop_recording` in `LinuxCaptureBackend`
 - [x] 16h. Add `start_recording_video` and `stop_recording_video` Tauri commands
-- [ ] 16i. Update `FakeCaptureBackend` and TS test mocks for recording
+- [x] 16i. Update `FakeCaptureBackend` and TS test mocks for recording
 - [ ] 16j. Add unit tests for encoder/muxer selection
 
 #### 4.2 Start/Stop End-to-End

@@ -13,6 +13,17 @@ vi.mock("@tauri-apps/api/core", () => ({
         height: 600,
       });
     }
+    if (cmd === "start_recording_video") {
+      return Promise.resolve();
+    }
+    if (cmd === "stop_recording_video") {
+      return Promise.resolve({
+        path: "/tmp/test-recording.mp4",
+        duration_ms: 5000,
+        width: 1920,
+        height: 1080,
+      });
+    }
     return Promise.resolve(null);
   }),
   convertFileSrc: vi.fn().mockImplementation((path: string) => {
