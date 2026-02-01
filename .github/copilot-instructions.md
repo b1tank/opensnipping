@@ -63,6 +63,8 @@ Tooling notes:
 
 ## Cross-Layer Contract (TS ⇄ Rust)
 
+> **See also:** [tauri-contract skill](.github/skills/tauri-contract/SKILL.md) for detailed sync checklist.
+
 Keep Rust backend and TS frontend in sync. The UI depends on these being stable:
 
 - Event names
@@ -143,6 +145,8 @@ Classify all work before starting to maintain atomic commits:
 
 ## Plan Management & Task Decomposition
 
+> **See also:** `decompose-task` skill for detailed decomposition procedure.
+
 **`plan.md` is a living document**—not a static roadmap. It evolves as complexity is discovered.
 
 **Before starting any task**, evaluate decomposition need:
@@ -206,7 +210,7 @@ Keep descriptions lowercase, imperative, under 50 characters.
 
 Include brief rationale (e.g., "Tests pass; new `capture_screenshot` method is interface-only, no callers yet").
 
-**Pre-commit checks:** Run the pre-commit agent via `runSubagent` and address findings before committing.
+**Pre-commit checks:** Use the `diff-check` skill to validate changes before committing.
 
 **Human verification decision flow:**
 - Verifiable yourself (tests pass, contract-only, deterministic logic) → commit and push
@@ -225,10 +229,31 @@ See [engineer.agent.md](agents/engineer.agent.md) for delegation protocols.
 ## Agent Notes
 
 Available agents:
-- **engineer** (`.github/agents/engineer.agent.md`): Main workflow—atomic steps + tests
-- **pre-commit** (`.github/agents/pre-commit.agent.md`): Invoke via `runSubagent` before committing
-- **planner** (`.github/agents/planner.agent.md`): Decompose large tasks into atomic sub-tasks
+- **product** (`.github/agents/product.agent.md`): Product designer—drafts spec.md from ideas
+- **lead** (`.github/agents/lead.agent.md`): Tech lead—orchestrates work, generates plan.md
+- **engineer** (`.github/agents/engineer.agent.md`): Dedicated implementation—writes code, tests, commits
+- **reviewer** (`.github/agents/reviewer.agent.md`): Code reviewer—critical "grill me" feedback
+
+Available skills:
+- **decompose-task**: Break large tasks (>100 lines) into atomic sub-tasks
+- **diff-check**: Author cleanup before commit/PR submit
+- **tauri-contract** (`.github/skills/tauri-contract/SKILL.md`): TS ⇄ Rust contract sync
+
+Available prompts:
+- `/new-project`: Start new project → @product
+- `/new-agent`: Create new agent → @lead
+- `/work-on-next`: Next task → @lead
+- `/self-improve`: Improve agent setup
 
 When uncertain:
 - Read `opensnipping/spec.md` and `opensnipping/plan.md` first
 - Prefer verified answers from code over guesses
+
+## Learning Mode
+
+When explaining code or changes:
+- Explain the *why* behind changes, not just the what
+- Use ASCII diagrams to illustrate architecture, data flow, protocols
+- Offer to generate visual HTML presentations for complex concepts
+- When reviewing unfamiliar code, summarize structure before diving in
+- Ask follow-up questions to fill knowledge gaps

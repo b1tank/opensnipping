@@ -1,29 +1,46 @@
 ---
 name: work-on-next
-description: work on the next atomic task from the plan
+description: Work on the next atomic task from the plan. Invokes @lead for orchestration.
 ---
 
-Using [plan](../../opensnipping/plan.md), identify the next atomic task. The task should be logically cohesive and verifiable by test or manual check.
+Using the project's `plan.md`, identify and execute the next atomic task.
+
+## Invoke @lead
+
+The **@lead** agent will:
+
+1. **Identify next task** from plan.md
+2. **Check task size** — if >100 lines, decompose using `decompose-task` skill
+3. **Delegate or execute**:
+   - Simple task → @lead handles directly
+   - Complex task → delegates to @engineer
 
 ## Before Starting (MANDATORY)
 
 ### 1. Parallel Analysis
-- Review 2-4 upcoming atomic tasks for safe parallelization
-- If any can run in parallel, provide a ready-to-copy prompt for a separate agent (with context and clear spec)
+- Review 2-4 upcoming tasks for safe parallelization
+- If any can run in parallel, provide a ready-to-copy prompt for a separate @engineer window
 
 ### 2. Task Decomposition Check
-- **Estimate lines of code** for the selected task
-- **If >100 lines**: Use `runSubagent` to invoke planner—see [Task Decomposition Workflow](../agents/engineer.agent.md#task-decomposition-workflow)
-- Wait for human confirmation before proceeding with decomposed sub-tasks
+- Estimate lines of code
+- If >100 lines: invoke `decompose-task` skill
+- Wait for human confirmation before proceeding
 
 ## Execute Task
 
-1. Implement
-2. Compile
-3. Test
+1. Implement changes
+2. Compile/build
+3. Run tests
 
 ## Before Committing (MANDATORY)
 
-1. **Run pre-commit subagent** via `runSubagent`—see [Pre-Commit Subagent](../agents/engineer.agent.md#pre-commit-subagent-via-runsubagent)
+1. Run `diff-check` skill for cleanup validation
 2. Address any findings
-3. Commit per [Commit and Push Policy](../copilot-instructions.md#commit-and-push-policy)
+3. Commit with clear message: `[category]: description`
+
+## After Completion
+
+@lead will:
+- Update plan.md checkboxes
+- Offer to continue or suggest new session
+- Identify next parallelizable work
