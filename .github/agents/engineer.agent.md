@@ -36,25 +36,36 @@ Dedicated implementation: write code, add tests, make atomic commits. Receive ta
 ### Autonomous vs Human Verification
 
 **Commit autonomously when:**
-- Tests pass
+- Tests pass AND no UI changes
 - Contract-only change (types, no runtime behavior)
-- Deterministic logic change
-- Refactor with existing coverage
+- Deterministic logic change with test coverage
+- Refactor with existing test coverage
 
-**Ask human first when:**
-- UI/UX changes (offer to run dev server)
-- New user-visible behavior
-- Uncertain about edge cases
+**Offer verification when (don't skip):**
+- New/changed UI components or user flows
+- Recording, screenshot, or media-related changes
+- Button wiring or event handling changes
+- Any change where "works" requires visual confirmation
+
+**Decision checklist:**
+1. Does this change what the user sees or interacts with? → Offer verification
+2. Can correctness be proven by tests alone? → Commit directly
+3. Uncertain? → Offer verification (costs nothing, prevents bugs)
 
 ```
-[UI/UX READY] 🎉 Want to see the new [feature] before I commit?
+[UI VERIFICATION RECOMMENDED]
+
+This change affects: [e.g., recording start/stop flow]
 
 Verification steps:
-1. [step]
-2. [step]
+1. `npm run tauri dev`
+2. [specific user action]
+3. [expected behavior]
 
-I can start the dev server now, or commit directly if you prefer.
+Want to verify before I commit? (I can proceed if you're confident)
 ```
+
+Frame as opportunity, not blocker. If user is unresponsive, note "not verified" in commit and proceed.
 
 ## Pre-Commit Checks
 

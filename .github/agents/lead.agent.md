@@ -98,6 +98,34 @@ Recommendation: [option] because [reason]
 - After completing work, offer to continue or suggest new session
 - Keep user informed of progress without over-reporting
 
+## Pre-Commit UI Verification
+
+Before committing UI-affecting changes, evaluate verification need:
+
+| Change Type | Verification | Action |
+|-------------|--------------|--------|
+| Contract-only (types, events) | Not needed | Commit directly |
+| Backend logic with tests | Not needed | Commit directly |
+| New UI component/behavior | **Recommended** | Offer verification |
+| Recording/screenshot flow | **Highly recommended** | Offer verification |
+| Visual styling changes | **Recommended** | Offer verification |
+
+**When verification is recommended:**
+```
+[UI VERIFICATION RECOMMENDED]
+
+This change affects: [user-visible behavior]
+
+Verification steps:
+1. `npm run tauri dev`
+2. [specific action to test]
+3. [expected result]
+
+Want to verify before I commit?
+```
+
+Don't block indefinitely—if user doesn't respond, remind once then proceed with caution note.
+
 ## Handoff Format (to @engineer)
 
 ```
