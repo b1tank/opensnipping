@@ -22,6 +22,7 @@
         "head": true,
         "tail": true,
         "wc": true,
-        "npx tsc": true
+        "npx tsc": true,
+        "cp": true
     }
 }
