@@ -261,7 +261,7 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
 **Done when**: user can record screen/window/region to MP4/MKV with pause/resume.
 
 ### Milestone 5 — Add Audio (system + mic) + Sync (2–4 days)
-- [ ] 20. Add microphone audio source and encode (AAC/Opus depending on container):
+- [x] 20. Add microphone audio source and encode (AAC/Opus depending on container):
    - MP4: AAC recommended
    - MKV: Opus acceptable
 - [ ] 21. Add system audio capture:

@@ -4,7 +4,7 @@
 // on Linux (Wayland and X11).
 
 use crate::capture::{CaptureBackendError, RecordingResult, ScreenshotResult, SelectionResult};
-use crate::config::{CaptureConfig, CaptureSource, ContainerFormat};
+use crate::config::{AudioConfig, CaptureConfig, CaptureSource, ContainerFormat};
 use ashpd::desktop::screencast::{CursorMode, Screencast, SourceType};
 use ashpd::desktop::PersistMode;
 use gstreamer::prelude::*;
@@ -19,6 +19,18 @@ const H264_ENCODERS: &[&str] = &[
     "vaapih264enc",  // Intel/AMD iGPU via VA-API
     "nvh264enc",     // NVIDIA via NVENC
     "x264enc",       // Software fallback (libx264)
+];
+
+/// AAC audio encoders in order of preference
+const AAC_ENCODERS: &[&str] = &[
+    "fdkaacenc",     // FDK AAC (best quality, may need licensing)
+    "voaacenc",      // VO-AAC (LGPL, good quality)
+    "avenc_aac",     // libavcodec AAC (fallback)
+];
+
+/// Opus audio encoders (for MKV)
+const OPUS_ENCODERS: &[&str] = &[
+    "opusenc",       // Standard Opus encoder
 ];
 
 /// Detect the best available H.264 encoder from GStreamer registry
@@ -55,6 +67,48 @@ pub fn get_muxer_for_container(container: ContainerFormat) -> &'static str {
     }
 }
 
+/// Detect the best available audio encoder for the given container format
+///
+/// For MP4: prefers AAC encoders
+/// For MKV: prefers Opus encoder
+/// Returns None if no suitable audio encoder is available.
+pub fn detect_available_audio_encoder(container: ContainerFormat) -> Option<&'static str> {
+    // Ensure GStreamer is initialized (safe to call multiple times)
+    if gstreamer::init().is_err() {
+        warn!("Failed to initialize GStreamer for audio encoder detection");
+        return None;
+    }
+
+    let encoders: &[&str] = match container {
+        ContainerFormat::Mp4 => AAC_ENCODERS,
+        ContainerFormat::Mkv => OPUS_ENCODERS,
+    };
+
+    for encoder in encoders {
+        if let Some(factory) = gstreamer::ElementFactory::find(encoder) {
+            if factory.create().build().is_ok() {
+                debug!("Found available audio encoder: {}", encoder);
+                return Some(encoder);
+            }
+        }
+    }
+
+    // Fallback: try any of the AAC encoders for MKV too (matroskamux supports AAC)
+    if container == ContainerFormat::Mkv {
+        for encoder in AAC_ENCODERS {
+            if let Some(factory) = gstreamer::ElementFactory::find(encoder) {
+                if factory.create().build().is_ok() {
+                    debug!("Falling back to AAC encoder for MKV: {}", encoder);
+                    return Some(encoder);
+                }
+            }
+        }
+    }
+
+    warn!("No audio encoder found for {:?}", container);
+    None
+}
+
 /// Active recording pipeline
 ///
 /// Manages a GStreamer pipeline for screen recording, tracking start time
@@ -74,12 +128,15 @@ pub struct RecordingPipeline {
 impl RecordingPipeline {
     /// Create a new recording pipeline
     ///
-    /// Builds the pipeline: pipewiresrc ! videoconvert ! videoscale ! encoder ! muxer ! filesink
+    /// Builds the pipeline with optional audio:
+    /// - Video: pipewiresrc ! videoconvert ! videoscale ! encoder ! muxer ! filesink
+    /// - Audio (if mic enabled): pulsesrc ! audioconvert ! audioresample ! audio_encoder ! muxer
     pub fn new(
         node_id: u32,
         output_path: std::path::PathBuf,
         fps: u8,
         container: ContainerFormat,
+        audio: &AudioConfig,
         width: Option<u32>,
         height: Option<u32>,
     ) -> Result<Self, CaptureBackendError> {
@@ -88,8 +145,8 @@ impl RecordingPipeline {
             CaptureBackendError::Internal(format!("Failed to initialize GStreamer: {}", e))
         })?;
 
-        // Detect encoder
-        let encoder = detect_available_encoder().ok_or_else(|| {
+        // Detect video encoder
+        let video_encoder = detect_available_encoder().ok_or_else(|| {
             CaptureBackendError::Internal("No H.264 encoder available".to_string())
         })?;
 
@@ -97,21 +154,53 @@ impl RecordingPipeline {
         let muxer = get_muxer_for_container(container);
 
         // Build pipeline description
-        // Note: video/x-raw,framerate caps filter enforces consistent output framerate
-        let pipeline_str = format!(
-            "pipewiresrc path={node_id} ! \
-             videoconvert ! \
-             videoscale ! \
-             video/x-raw,framerate={fps}/1 ! \
-             {encoder} ! \
-             {muxer} ! \
-             filesink location={output_path}",
-            node_id = node_id,
-            fps = fps,
-            encoder = encoder,
-            muxer = muxer,
-            output_path = output_path.display()
-        );
+        // When audio is enabled, we use a named muxer so both branches can link to it
+        let pipeline_str = if audio.mic {
+            // Detect audio encoder
+            let audio_encoder = detect_available_audio_encoder(container).ok_or_else(|| {
+                CaptureBackendError::Internal("No audio encoder available for microphone".to_string())
+            })?;
+
+            info!("Recording with microphone audio, encoder: {}", audio_encoder);
+
+            // Pipeline with video + mic audio
+            // Named mux element allows multiple inputs
+            format!(
+                "pipewiresrc path={node_id} ! \
+                 videoconvert ! \
+                 videoscale ! \
+                 video/x-raw,framerate={fps}/1 ! \
+                 {video_encoder} ! mux. \
+                 pulsesrc ! \
+                 audioconvert ! \
+                 audioresample ! \
+                 {audio_encoder} ! mux. \
+                 {muxer} name=mux ! \
+                 filesink location={output_path}",
+                node_id = node_id,
+                fps = fps,
+                video_encoder = video_encoder,
+                audio_encoder = audio_encoder,
+                muxer = muxer,
+                output_path = output_path.display()
+            )
+        } else {
+            // Video-only pipeline
+            format!(
+                "pipewiresrc path={node_id} ! \
+                 videoconvert ! \
+                 videoscale ! \
+                 video/x-raw,framerate={fps}/1 ! \
+                 {video_encoder} ! \
+                 {muxer} ! \
+                 filesink location={output_path}",
+                node_id = node_id,
+                fps = fps,
+                video_encoder = video_encoder,
+                muxer = muxer,
+                output_path = output_path.display()
+            )
+        };
 
         debug!("Creating recording pipeline: {}", pipeline_str);
 
@@ -617,6 +706,7 @@ impl super::CaptureBackend for LinuxCaptureBackend {
             output_path,
             config.fps,
             config.container,
+            &config.audio,
             selection.width,
             selection.height,
         )?;
@@ -725,5 +815,32 @@ mod tests {
     #[test]
     fn test_muxer_for_mkv() {
         assert_eq!(get_muxer_for_container(ContainerFormat::Mkv), "matroskamux");
+    }
+
+    #[test]
+    fn test_detect_audio_encoder_mp4_returns_aac() {
+        // If an audio encoder is found for MP4, it should be an AAC encoder
+        if let Some(encoder) = detect_available_audio_encoder(ContainerFormat::Mp4) {
+            assert!(
+                AAC_ENCODERS.contains(&encoder),
+                "MP4 audio encoder '{}' should be an AAC encoder",
+                encoder
+            );
+        }
+        // Note: It's OK if no encoder is found (e.g., CI without GStreamer plugins)
+    }
+
+    #[test]
+    fn test_detect_audio_encoder_mkv_returns_opus_or_aac() {
+        // If an audio encoder is found for MKV, it should be Opus or AAC (fallback)
+        if let Some(encoder) = detect_available_audio_encoder(ContainerFormat::Mkv) {
+            let is_valid = OPUS_ENCODERS.contains(&encoder) || AAC_ENCODERS.contains(&encoder);
+            assert!(
+                is_valid,
+                "MKV audio encoder '{}' should be Opus or AAC",
+                encoder
+            );
+        }
+        // Note: It's OK if no encoder is found (e.g., CI without GStreamer plugins)
     }
 }
