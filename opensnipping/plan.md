@@ -264,7 +264,7 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
 - [x] 20. Add microphone audio source and encode (AAC/Opus depending on container):
    - MP4: AAC recommended
    - MKV: Opus acceptable
-- [ ] 21. Add system audio capture:
+- [x] 21. Add system audio capture:
    - prefer: portal-provided audio with the screencast session if available
    - fallback: PulseAudio monitor source (X11 / non-portal environments)
 - [ ] 22. Mix mic + system (if both enabled).

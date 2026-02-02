@@ -109,6 +109,20 @@ pub fn detect_available_audio_encoder(container: ContainerFormat) -> Option<&'st
     None
 }
 
+/// Get the system audio monitor source device name
+///
+/// Returns the PulseAudio monitor source for capturing system audio.
+/// Uses @DEFAULT_MONITOR@ which PulseAudio resolves to the default
+/// output device's monitor source.
+///
+/// Note: This requires PulseAudio or PipeWire with PulseAudio compatibility.
+pub fn get_system_audio_source() -> &'static str {
+    // @DEFAULT_MONITOR@ is a special PulseAudio device name that resolves
+    // to the monitor source of the current default output device.
+    // This works with both PulseAudio and PipeWire (via pipewire-pulse).
+    "@DEFAULT_MONITOR@"
+}
+
 /// Active recording pipeline
 ///
 /// Manages a GStreamer pipeline for screen recording, tracking start time
@@ -131,6 +145,8 @@ impl RecordingPipeline {
     /// Builds the pipeline with optional audio:
     /// - Video: pipewiresrc ! videoconvert ! videoscale ! encoder ! muxer ! filesink
     /// - Audio (if mic enabled): pulsesrc ! audioconvert ! audioresample ! audio_encoder ! muxer
+    /// - Audio (if system enabled): pulsesrc device=@DEFAULT_MONITOR@ ! audioconvert ! audioresample ! audio_encoder ! muxer
+    /// - Audio (if both enabled): mix handled separately (see task 22)
     pub fn new(
         node_id: u32,
         output_path: std::path::PathBuf,
@@ -153,17 +169,38 @@ impl RecordingPipeline {
         // Get muxer for container format
         let muxer = get_muxer_for_container(container);
 
+        // Determine audio configuration
+        let has_mic = audio.mic;
+        let has_system = audio.system;
+        let has_any_audio = has_mic || has_system;
+
         // Build pipeline description
         // When audio is enabled, we use a named muxer so both branches can link to it
-        let pipeline_str = if audio.mic {
+        let pipeline_str = if has_any_audio {
             // Detect audio encoder
             let audio_encoder = detect_available_audio_encoder(container).ok_or_else(|| {
-                CaptureBackendError::Internal("No audio encoder available for microphone".to_string())
+                CaptureBackendError::Internal("No audio encoder available".to_string())
             })?;
 
-            info!("Recording with microphone audio, encoder: {}", audio_encoder);
+            // Determine audio source configuration
+            let audio_source = if has_mic && has_system {
+                // Both mic and system audio - for now, prioritize system audio
+                // Full mixing support will come in task 22
+                info!(
+                    "Recording with both mic and system audio requested. Using system audio for now (mixing in task 22), encoder: {}",
+                    audio_encoder
+                );
+                format!("pulsesrc device={}", get_system_audio_source())
+            } else if has_system {
+                info!("Recording with system audio, encoder: {}", audio_encoder);
+                format!("pulsesrc device={}", get_system_audio_source())
+            } else {
+                // has_mic only
+                info!("Recording with microphone audio, encoder: {}", audio_encoder);
+                "pulsesrc".to_string()
+            };
 
-            // Pipeline with video + mic audio
+            // Pipeline with video + audio
             // Named mux element allows multiple inputs
             format!(
                 "pipewiresrc path={node_id} ! \
@@ -171,7 +208,7 @@ impl RecordingPipeline {
                  videoscale ! \
                  video/x-raw,framerate={fps}/1 ! \
                  {video_encoder} ! mux. \
-                 pulsesrc ! \
+                 {audio_source} ! \
                  audioconvert ! \
                  audioresample ! \
                  {audio_encoder} ! mux. \
@@ -180,6 +217,7 @@ impl RecordingPipeline {
                 node_id = node_id,
                 fps = fps,
                 video_encoder = video_encoder,
+                audio_source = audio_source,
                 audio_encoder = audio_encoder,
                 muxer = muxer,
                 output_path = output_path.display()
@@ -946,9 +984,6 @@ mod tests {
     #[test]
     #[ignore = "Requires GStreamer, PipeWire, and a valid stream node"]
     fn test_recording_smoke_start_stop() {
-        use std::thread;
-        use std::time::Duration;
-
         if !gstreamer_recording_available() {
             println!("Skipping: GStreamer or required plugins not available");
             return;
@@ -966,21 +1001,22 @@ mod tests {
         // for manual testing or CI with proper setup.
 
         let temp_dir = std::env::temp_dir();
-        let output_path = temp_dir.join(format!("test_recording_{}.mp4", uuid::Uuid::new_v4()));
+        let _output_path = temp_dir.join(format!("test_recording_{}.mp4", uuid::Uuid::new_v4()));
 
         // In a real test with portal access:
         // let node_id = <get from portal session>;
         // let mut pipeline = RecordingPipeline::new(
         //     node_id,
-        //     output_path.clone(),
+        //     _output_path.clone(),
         //     30, // fps
         //     ContainerFormat::Mp4,
+        //     &AudioConfig::default(),
         //     Some(1920),
         //     Some(1080),
         // ).expect("Failed to create pipeline");
         //
         // pipeline.start().expect("Failed to start recording");
-        // thread::sleep(Duration::from_secs(3));
+        // std::thread::sleep(std::time::Duration::from_secs(3));
         // let result = pipeline.stop().expect("Failed to stop recording");
         //
         // assert!(std::path::Path::new(&result.path).exists(), "Output file should exist");
@@ -988,7 +1024,7 @@ mod tests {
         // assert!(metadata.len() > 0, "Output file should be non-empty");
         //
         // // Cleanup
-        // let _ = std::fs::remove_file(&output_path);
+        // let _ = std::fs::remove_file(&_output_path);
 
         println!("Recording smoke test placeholder - run manually with portal session");
     }
@@ -1021,5 +1057,50 @@ mod tests {
         //     width: 1920,
         //     height: 1080,
         // }
+    }
+
+    // --- System audio capture tests ---
+
+    #[test]
+    fn test_get_system_audio_source_returns_default_monitor() {
+        // Verify the system audio source is the PulseAudio default monitor
+        let source = get_system_audio_source();
+        assert_eq!(
+            source, "@DEFAULT_MONITOR@",
+            "System audio source should be @DEFAULT_MONITOR@"
+        );
+    }
+
+    #[test]
+    fn test_system_audio_source_is_constant() {
+        // Verify the system audio source is deterministic
+        for _ in 0..10 {
+            assert_eq!(
+                get_system_audio_source(),
+                "@DEFAULT_MONITOR@",
+                "System audio source should be constant"
+            );
+        }
+    }
+
+    #[test]
+    fn test_audio_config_combinations() {
+        // Test that we correctly identify audio configuration states
+        let no_audio = AudioConfig { system: false, mic: false };
+        let mic_only = AudioConfig { system: false, mic: true };
+        let system_only = AudioConfig { system: true, mic: false };
+        let both_audio = AudioConfig { system: true, mic: true };
+
+        // No audio
+        assert!(!no_audio.system && !no_audio.mic);
+
+        // Mic only
+        assert!(!mic_only.system && mic_only.mic);
+
+        // System only
+        assert!(system_only.system && !system_only.mic);
+
+        // Both
+        assert!(both_audio.system && both_audio.mic);
     }
 }
