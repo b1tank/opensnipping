@@ -156,4 +156,25 @@ mod tests {
         let deserialized: CaptureConfig = serde_json::from_str(&json).unwrap();
         assert_eq!(config, deserialized);
     }
+
+    #[test]
+    fn test_audio_config_combinations() {
+        // Test that AudioConfig correctly represents all audio states
+        let no_audio = AudioConfig { system: false, mic: false };
+        let mic_only = AudioConfig { system: false, mic: true };
+        let system_only = AudioConfig { system: true, mic: false };
+        let both_audio = AudioConfig { system: true, mic: true };
+
+        // No audio
+        assert!(!no_audio.system && !no_audio.mic);
+
+        // Mic only
+        assert!(!mic_only.system && mic_only.mic);
+
+        // System only
+        assert!(system_only.system && !system_only.mic);
+
+        // Both
+        assert!(both_audio.system && both_audio.mic);
+    }
 }

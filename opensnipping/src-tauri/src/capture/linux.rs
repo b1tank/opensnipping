@@ -116,7 +116,7 @@ pub fn detect_available_audio_encoder(container: ContainerFormat) -> Option<&'st
 /// output device's monitor source.
 ///
 /// Note: This requires PulseAudio or PipeWire with PulseAudio compatibility.
-pub fn get_system_audio_source() -> &'static str {
+pub const fn get_system_audio_source() -> &'static str {
     // @DEFAULT_MONITOR@ is a special PulseAudio device name that resolves
     // to the monitor source of the current default output device.
     // This works with both PulseAudio and PipeWire (via pipewire-pulse).
@@ -184,12 +184,12 @@ impl RecordingPipeline {
 
             // Determine audio source configuration
             let audio_source = if has_mic && has_system {
-                // Both mic and system audio - for now, prioritize system audio
-                // Full mixing support will come in task 22
-                info!(
-                    "Recording with both mic and system audio requested. Using system audio for now (mixing in task 22), encoder: {}",
-                    audio_encoder
+                // Both mic and system audio requested - currently using system audio only
+                // Audio mixing will be implemented separately
+                warn!(
+                    "Both mic and system audio requested; using system audio only (mixing not yet supported)"
                 );
+                info!("Recording with system audio, encoder: {}", audio_encoder);
                 format!("pulsesrc device={}", get_system_audio_source())
             } else if has_system {
                 info!("Recording with system audio, encoder: {}", audio_encoder);
@@ -1083,24 +1083,4 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_audio_config_combinations() {
-        // Test that we correctly identify audio configuration states
-        let no_audio = AudioConfig { system: false, mic: false };
-        let mic_only = AudioConfig { system: false, mic: true };
-        let system_only = AudioConfig { system: true, mic: false };
-        let both_audio = AudioConfig { system: true, mic: true };
-
-        // No audio
-        assert!(!no_audio.system && !no_audio.mic);
-
-        // Mic only
-        assert!(!mic_only.system && mic_only.mic);
-
-        // System only
-        assert!(system_only.system && !system_only.mic);
-
-        // Both
-        assert!(both_audio.system && both_audio.mic);
-    }
 }
