@@ -77,7 +77,14 @@ Before committing, run through `diff-check` skill:
 
 ### Reviewer Invocation
 
-**Invoke @reviewer before commit when ANY apply:**
+**Always require review (regardless of size):**
+| Category | Reason |
+|----------|--------|
+| `feat` | New features introduce complexity and risk |
+| `refactor` | Structural changes can break existing behavior |
+| `fix` (security/data) | Critical paths need extra scrutiny |
+
+**Size-based review triggers:**
 | Criterion | Threshold |
 |-----------|----------|
 | Lines changed | >50 |

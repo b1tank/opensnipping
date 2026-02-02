@@ -213,12 +213,20 @@ Include brief rationale (e.g., "Tests pass; new `capture_screenshot` method is i
 **Pre-commit checks:** Use the `diff-check` skill to validate changes before committing.
 
 **Reviewer invocation criteria:** Invoke @reviewer before commit when ANY of these apply:
-- >50 lines changed
-- 3+ files modified
+
+| Category | Always Review | Size-Based Review |
+|----------|---------------|-------------------|
+| `feat` | ✓ Always | — |
+| `refactor` | ✓ Always | — |
+| `fix` | If security/data-related | >50 lines or 3+ files |
+| `test`, `docs`, `chore` | — | Skip (low risk) |
+| `agent` | — | Skip (no runtime behavior) |
+
+**Additional triggers (any category):**
 - New/changed interfaces, traits, or classes
 - New state machine transitions or states
 - Cross-layer changes (Rust + TS beyond contract sync)
-- Refactors touching shared utilities or core modules
+- Changes to shared utilities or core modules
 
 Skip review for: docs-only, test-only, config/chore, or contract-only additions with no runtime behavior.
 

@@ -42,9 +42,24 @@ When given a spec.md:
 - Clarifying questions
 
 ### When to invoke @reviewer
-- Before merging significant changes
+
+**Always require review (regardless of size):**
+- `feat` — new features introduce complexity and risk
+- `refactor` — structural changes can break existing behavior
+- `fix` (security/data-related) — critical paths need extra scrutiny
+
+**Size-based triggers (any category):**
+- >50 lines changed or 3+ files modified
+- New/changed interfaces, traits, or classes
+- New state machine transitions or states
+- Cross-layer changes (Rust + TS beyond contract sync)
+- Changes to shared utilities or core modules
+
+**Additional triggers:**
 - User requests "grill me"
 - PR is ready for review
+
+**Skip review for:** docs-only, test-only, config/chore, contract-only (no runtime behavior).
 
 ## Task Decomposition
 
