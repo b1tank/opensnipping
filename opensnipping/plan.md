@@ -268,18 +268,18 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
 - **Symptom**: AnnotationCanvas shows "Failed to load image: /tmp/opensnipping-*.png"
 - **Root cause**: Tauri's asset protocol is not enabled; `convertFileSrc()` generates URLs webview can't load
 - **Fix tasks**:
-  - [ ] A1. Enable `protocol-asset` feature in `src-tauri/Cargo.toml`: `tauri = { version = "2", features = ["protocol-asset"] }`
-  - [ ] A2. Add filesystem permission scope in `capabilities/default.json`: `"fs:allow-read-text-file"` with `/tmp` scope (or use `fs:default` + configure scope)
+  - [x] A1. Enable `protocol-asset` feature in `src-tauri/Cargo.toml`: `tauri = { version = "2", features = ["protocol-asset"] }`
+  - [x] A2. Add asset protocol scope in `tauri.conf.json`: `security.assetProtocol.scope = ["/tmp/**"]`
   - [ ] A3. Verify: screenshot → annotation overlay loads image correctly
 
 #### Issue B: Recording Creates Empty MP4 Files
 - **Symptom**: `/tmp/opensnipping-*.mp4` files are 0 bytes
 - **Root cause**: ashpd `Session` handle dropped after `request_selection()`, portal closes stream, `node_id` becomes invalid
 - **Fix tasks**:
-  - [ ] B1. Modify `ActiveSession` in `capture/linux/backend.rs` to store the ashpd `Session` handle (not just metadata)
-  - [ ] B2. Keep session alive: don't drop until `cancel_selection()` or recording stops
-  - [ ] B3. Update `request_selection()` to move session into `ActiveSession`
-  - [ ] B4. Update `stop_recording()` to clean up the stored session
+  - [x] B1. Modify `ActiveSession` in `capture/linux/backend.rs` to store the ashpd `Session` handle (not just metadata)
+  - [x] B2. Keep session alive: don't drop until `cancel_selection()` or recording stops
+  - [x] B3. Update `request_selection()` to move session into `ActiveSession`
+  - [x] B4. Update `stop_recording()` to clean up the stored session
   - [ ] B5. Verify: 5-second recording produces non-empty MP4 with video frames
 
 #### Issue C: Pause/Stop Error "No recording in progress"

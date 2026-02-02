@@ -3,7 +3,7 @@ use crate::capture::{
 };
 use crate::config::{CaptureConfig, CaptureSource};
 use ashpd::desktop::screencast::{CursorMode, Screencast, SourceType};
-use ashpd::desktop::PersistMode;
+use ashpd::desktop::{PersistMode, Session};
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
@@ -22,12 +22,21 @@ pub struct LinuxCaptureBackend {
 }
 
 /// Holds an active screencast session
-#[derive(Debug)]
 pub(super) struct ActiveSession {
+    /// The ashpd session - MUST be kept alive for the stream to remain valid
+    #[allow(dead_code)]
+    session: Session<'static, Screencast<'static>>,
     /// PipeWire node ID (stored for future use in recording pipeline)
-    _node_id: u32,
-    /// Stream file descriptor (if available)
-    _stream_fd: Option<std::os::fd::OwnedFd>,
+    #[allow(dead_code)]
+    node_id: u32,
+}
+
+impl std::fmt::Debug for ActiveSession {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ActiveSession")
+            .field("node_id", &self.node_id)
+            .finish()
+    }
 }
 
 impl LinuxCaptureBackend {
@@ -155,11 +164,11 @@ impl CaptureBackend for LinuxCaptureBackend {
             stream.size()
         );
 
-        // Store session info
+        // Store session to keep the portal stream alive
         let mut session_lock = self.session.lock().await;
         *session_lock = Some(ActiveSession {
-            _node_id: node_id,
-            _stream_fd: None,
+            session,
+            node_id,
         });
 
         let (width, height) = stream
@@ -419,6 +428,12 @@ impl CaptureBackend for LinuxCaptureBackend {
 
         // Stop the pipeline and get the result
         let result = pipeline.stop()?;
+
+        // Clear the session - portal stream is no longer needed
+        {
+            let mut session_lock = self.session.lock().await;
+            *session_lock = None;
+        }
 
         info!(
             "Recording stopped: {} ({} ms)",
