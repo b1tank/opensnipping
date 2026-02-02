@@ -264,31 +264,41 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
 
 **Root cause analysis completed 2026-02-01 via @ui-tester verification.**
 
-#### Issue A: Screenshot Image Loading Fails
+#### Issue A: Screenshot Image Loading Fails ✅ FIXED
 - **Symptom**: AnnotationCanvas shows "Failed to load image: /tmp/opensnipping-*.png"
 - **Root cause**: Tauri's asset protocol is not enabled; `convertFileSrc()` generates URLs webview can't load
 - **Fix tasks**:
   - [x] A1. Enable `protocol-asset` feature in `src-tauri/Cargo.toml`: `tauri = { version = "2", features = ["protocol-asset"] }`
   - [x] A2. Add asset protocol scope in `tauri.conf.json`: `security.assetProtocol.scope = ["/tmp/**"]`
-  - [ ] A3. Verify: screenshot → annotation overlay loads image correctly
+  - [x] A3. Verify: screenshot → annotation overlay loads image correctly ✅ Verified 2026-02-02
 
-#### Issue B: Recording Creates Empty MP4 Files
+#### Issue B: Recording Creates Empty MP4 Files ⏳ IN PROGRESS
 - **Symptom**: `/tmp/opensnipping-*.mp4` files are 0 bytes
-- **Root cause**: ashpd `Session` handle dropped after `request_selection()`, portal closes stream, `node_id` becomes invalid
+- **Root cause**: Complex PipeWire stream lifetime issue — portal's PipeWire node_id expires quickly
+- **Investigation notes (2026-02-02)**:
+  - Session/Screencast handles are now stored correctly (verified Session.exists=true)
+  - Added `open_pipe_wire_remote()` fd support for GStreamer pipewiresrc
+  - GStreamer shows stream reaches "paused" state but negotiation hangs
+  - Node_id becomes invalid even with fd connection — may need different approach
 - **Fix tasks**:
   - [x] B1. Modify `ActiveSession` in `capture/linux/backend.rs` to store the ashpd `Session` handle (not just metadata)
   - [x] B2. Keep session alive: don't drop until `cancel_selection()` or recording stops
   - [x] B3. Update `request_selection()` to move session into `ActiveSession`
   - [x] B4. Update `stop_recording()` to clean up the stored session
-  - [ ] B5. Verify: 5-second recording produces non-empty MP4 with video frames
+  - [x] B5. Add PipeWire fd support via `open_pipe_wire_remote()`
+  - [x] B6. Fix state machine: don't transition to Recording if pipeline fails
+  - [ ] B7. Investigate PipeWire caps negotiation failure
+  - [ ] B8. Research alternative approaches (different GStreamer element, libpipewire direct)
+  - [ ] B9. Verify: 5-second recording produces non-empty MP4 with video frames
 
 #### Issue C: Pause/Stop Error "No recording in progress"
 - **Symptom**: State transitions succeed but GStreamer commands fail
-- **Root cause**: Downstream effect of Issue B; pipeline has no frames to process
+- **Root cause**: Downstream effect of Issue B; state machine bug fixed (B6)
 - **Fix tasks**:
-  - [ ] C1. After fixing B, verify pause/stop work correctly
-  - [ ] C2. (If still failing) Add pipeline health check in `start()`: verify first frame received before returning Ok
-  - [ ] C3. Improve error propagation: surface GStreamer errors to UI immediately
+  - [x] C1. Fix state machine to not show Recording when pipeline fails to start
+  - [ ] C2. After fixing B completely, verify pause/stop work correctly
+  - [ ] C3. (If still failing) Add pipeline health check in `start()`: verify first frame received before returning Ok
+  - [ ] C4. Improve error propagation: surface GStreamer errors to UI immediately
 
 **Done when**: Screenshot annotation loads images; recordings produce playable MP4s; pause/stop work without errors.
 
