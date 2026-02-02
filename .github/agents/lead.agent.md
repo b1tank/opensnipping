@@ -43,6 +43,8 @@ When given a spec.md:
 
 ### When to invoke @reviewer
 
+Invoke @reviewer before commit. Optionally invoke @explainer alongside for educational summaries.
+
 **Always require review (regardless of size):**
 - `feat` — new features introduce complexity and risk
 - `refactor` — structural changes can break existing behavior

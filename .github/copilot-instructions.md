@@ -212,7 +212,7 @@ Include brief rationale (e.g., "Tests pass; new `capture_screenshot` method is i
 
 **Pre-commit checks:** Use the `diff-check` skill to validate changes before committing.
 
-**Reviewer invocation criteria:** Invoke @reviewer before commit when ANY of these apply:
+**Reviewer invocation criteria:** Invoke @reviewer (and optionally @explainer for learning) before commit when ANY of these apply:
 
 | Category | Always Review | Size-Based Review |
 |----------|---------------|-------------------|
@@ -251,6 +251,7 @@ Available agents:
 - **lead** (`.github/agents/lead.agent.md`): Tech lead—orchestrates work, generates plan.md
 - **engineer** (`.github/agents/engineer.agent.md`): Dedicated implementation—writes code, tests, commits
 - **reviewer** (`.github/agents/reviewer.agent.md`): Code reviewer—critical "grill me" feedback
+- **explainer** (`.github/agents/explainer.agent.md`): Educational—explains changes with diagrams and visuals
 
 Available skills:
 - **decompose-task**: Break large tasks (>100 lines) into atomic sub-tasks

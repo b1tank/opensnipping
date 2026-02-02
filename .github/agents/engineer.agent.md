@@ -77,6 +77,8 @@ Before committing, run through `diff-check` skill:
 
 ### Reviewer Invocation
 
+Invoke @reviewer before commit. Optionally invoke @explainer alongside for educational summaries.
+
 **Always require review (regardless of size):**
 | Category | Reason |
 |----------|--------|
