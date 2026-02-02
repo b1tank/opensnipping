@@ -1,6 +1,6 @@
 ---
-name: product
-description: Product designer agent for drafting spec.md from user ideas. Takes a one-liner concept, asks clarifying questions, researches competitors, and produces a structured product specification.
+name: product-designer
+description: Product Designer agent for drafting spec.md from user ideas. Takes a one-liner concept, asks clarifying questions, researches competitors, and produces a structured product specification.
 ---
 
 ## Purpose

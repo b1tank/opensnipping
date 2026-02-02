@@ -248,8 +248,10 @@ See [engineer.agent.md](agents/engineer.agent.md) for delegation protocols.
 
 ## Agent Notes
 
+**Agent file format:** `.agent.md` files use raw markdown with YAML frontmatter—never wrap in code fences like ` ```chatagent `.
+
 Available agents:
-- **product** (`.github/agents/product.agent.md`): Product designer—drafts spec.md from ideas
+- **product-designer** (`.github/agents/product-designer.agent.md`): Product Designer—drafts spec.md from ideas
 - **lead** (`.github/agents/lead.agent.md`): Tech lead—orchestrates work, generates plan.md
 - **engineer** (`.github/agents/engineer.agent.md`): Dedicated implementation—writes code, tests, commits
 - **reviewer** (`.github/agents/reviewer.agent.md`): Code reviewer—critical "grill me" feedback
@@ -261,7 +263,7 @@ Available skills:
 - **tauri-contract** (`.github/skills/tauri-contract/SKILL.md`): TS ⇄ Rust contract sync
 
 Available prompts:
-- `/new-project`: Start new project → @product
+- `/new-project`: Start new project → @product-designer
 - `/new-agent`: Create new agent → @lead
 - `/work-on-next`: Next task → @lead
 - `/self-improve`: Improve agent setup

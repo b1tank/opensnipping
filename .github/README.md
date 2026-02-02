@@ -8,7 +8,7 @@ AI agent configuration for this repository. For the full architecture reference,
 
 | Prompt | Purpose | Invokes |
 |--------|---------|---------|
-| `/new-project` | Start new project from one-liner idea | `@product` |
+| `/new-project` | Start new project from one-liner idea | `@product-designer` |
 | `/new-agent` | Create a new agent role | `@lead` |
 | `/work-on-next` | Pick up next task from plan.md | `@lead` |
 | `/self-improve` | Improve agent instructions | (meta) |
@@ -17,7 +17,7 @@ AI agent configuration for this repository. For the full architecture reference,
 
 | Agent | Role |
 |-------|------|
-| `@product` | Product designer — drafts spec.md from ideas |
+| `@product-designer` | Product Designer — drafts spec.md from ideas |
 | `@lead` | Tech lead — orchestrates work, generates plan.md |
 | `@engineer` | Software engineer — dedicated implementation |
 | `@reviewer` | Code reviewer — critical "grill me" feedback |

@@ -1,9 +1,9 @@
 ---
 name: new-project
-description: Start a new project from a one-liner idea. Invokes @product to draft spec.md.
+description: Start a new project from a one-liner idea. Invokes @product-designer to draft spec.md.
 ---
 
-You want to start a new project. Invoke the **@product** agent to help you:
+You want to start a new project. Invoke the **@product-designer** agent to help you:
 
 1. **Provide your one-liner idea** (e.g., "A lightweight screen recorder like GNOME Screencast")
 
@@ -17,7 +17,7 @@ You want to start a new project. Invoke the **@product** agent to help you:
 
 4. **Iterate on spec.md** until satisfied
 
-The @product agent will:
+The @product-designer agent will:
 - Ask questions in small batches
 - Research existing products using the `market-research` skill
 - Draft spec.md using the `spec-template` skill (9-section format)
