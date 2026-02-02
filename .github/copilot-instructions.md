@@ -212,6 +212,16 @@ Include brief rationale (e.g., "Tests pass; new `capture_screenshot` method is i
 
 **Pre-commit checks:** Use the `diff-check` skill to validate changes before committing.
 
+**Reviewer invocation criteria:** Invoke @reviewer before commit when ANY of these apply:
+- >50 lines changed
+- 3+ files modified
+- New/changed interfaces, traits, or classes
+- New state machine transitions or states
+- Cross-layer changes (Rust + TS beyond contract sync)
+- Refactors touching shared utilities or core modules
+
+Skip review for: docs-only, test-only, config/chore, or contract-only additions with no runtime behavior.
+
 **Human verification decision flow:**
 - Verifiable yourself (tests pass, contract-only, deterministic logic) → commit and push
 - Requires visual/UX verification → ask human first with steps, then commit after confirmation

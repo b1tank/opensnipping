@@ -75,6 +75,26 @@ Before committing, run through `diff-check` skill:
 - Changes within task scope
 - Plan checkboxes updated
 
+### Reviewer Invocation
+
+**Invoke @reviewer before commit when ANY apply:**
+| Criterion | Threshold |
+|-----------|----------|
+| Lines changed | >50 |
+| Files modified | 3+ |
+| Structural changes | New/changed interfaces, traits, classes |
+| State machine | New states or transitions |
+| Cross-layer | Rust + TS beyond contract sync |
+| Core modules | Changes to shared utilities |
+
+**Skip review for:** docs-only, test-only, config/chore, contract-only (no runtime behavior).
+
+```
+[INVOKING REVIEWER]
+Reason: [which criterion triggered]
+Diff summary: [files and line count]
+```
+
 ## Session Continuity
 
 After completing a task:
