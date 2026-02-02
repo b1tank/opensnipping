@@ -17,16 +17,27 @@ When instructions conflict, spec/plan takes precedence.
 	- Entry: `opensnipping/src/main.tsx`
 	- App UI: `opensnipping/src/App.tsx`
 	- Shared contract types/events (TS): `opensnipping/src/types.ts`
+	- Tauri wrappers: `opensnipping/src/tauri/`
+		- `commands.ts` — Typed invoke wrappers
+		- `events.ts` — Event subscription hook (`useCaptureEvents`)
 	- Tests + mocks:
 		- Vitest setup: `opensnipping/src/test/setup.ts`
 		- Example test: `opensnipping/src/App.test.tsx`
+	- Archive: `opensnipping/archive/` — Completed plans/playbooks for reference
 - Tauri backend (Rust): `opensnipping/src-tauri/`
 	- Tauri config: `opensnipping/src-tauri/tauri.conf.json`
 	- App entrypoint: `opensnipping/src-tauri/src/main.rs`
-	- Tauri commands + event emission glue: `opensnipping/src-tauri/src/lib.rs`
+	- Lib + handler registration: `opensnipping/src-tauri/src/lib.rs`
+	- IPC layer: `opensnipping/src-tauri/src/ipc/`
+		- `commands.rs` — `#[tauri::command]` entrypoints
+		- `emit.rs` — Event emission helpers
+		- `errors.rs` — Error mapping
 	- Domain state machine: `opensnipping/src-tauri/src/state.rs`
 	- Capture config + validation: `opensnipping/src-tauri/src/config.rs`
 	- Event payload structs + event names: `opensnipping/src-tauri/src/events.rs`
+	- Capture backends: `opensnipping/src-tauri/src/capture/`
+		- `linux/` — PipeWire/portal backend (backend.rs, pipeline.rs, encoding.rs)
+		- `fake/` — Test backend (backend.rs, tests/)
 
 Notes:
 - `opensnipping/src-tauri/target/` is build output—do not edit or depend on it.
@@ -86,7 +97,7 @@ Keep Rust backend and TS frontend in sync. The UI depends on these being stable:
 
 When adding/removing fields or enum variants, update both sides and adjust tests.
 
-**Contract-first changes:** When modifying events/commands/types, update both Rust (`events.rs`/`lib.rs`) and TS (`types.ts`) in the same commit. Keep names/fields byte-for-byte consistent.
+**Contract-first changes:** When modifying events/commands/types, update both Rust (`events.rs`/`ipc/commands.rs`) and TS (`types.ts`/`tauri/commands.ts`) in the same commit. Keep names/fields byte-for-byte consistent.
 
 ## Orchestration & State Machine
 
@@ -97,10 +108,11 @@ The Rust `StateMachine` is the single source of truth for capture transitions:
 **State machine is law:** UI never "fixes up" state; it only requests actions and renders backend state. New states/transitions go into Rust `StateMachine` first (with tests), then wire to UI.
 
 New user actions (commands) require end-to-end wiring:
-1. Add `#[tauri::command]` in `opensnipping/src-tauri/src/lib.rs`
-2. Export via `tauri::generate_handler![...]`
-3. Call via `invoke(...)` in UI
-4. Add tests:
+1. Add `#[tauri::command]` in `opensnipping/src-tauri/src/ipc/commands.rs`
+2. Export via `tauri::generate_handler![...]` in `lib.rs`
+3. Add typed wrapper in `opensnipping/src/tauri/commands.ts`
+4. Call via wrapper in UI (not raw `invoke`)
+5. Add tests:
 	- UI: update mocks in `opensnipping/src/test/setup.ts` and tests in `opensnipping/src/App.test.tsx`
 	- Rust: add unit tests in the relevant module
 

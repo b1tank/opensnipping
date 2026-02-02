@@ -44,6 +44,28 @@ npm test                        # UI tests (Vitest)
 cd src-tauri && cargo test      # Rust tests
 ```
 
+### LOC Limits
+
+Source files must stay under 500 lines. Run the check locally:
+
+```bash
+cd opensnipping
+npm run check:loc
+```
+
+**Adding an exception:** If a file temporarily exceeds 500 LOC, add it to `scripts/loc.allowlist.tsv`:
+
+```
+path/to/file.rs	Reason for exception	2026-03-01
+```
+
+Fields (tab-separated):
+1. **Path** — relative to `opensnipping/`
+2. **Reason** — why it can't be split yet
+3. **Expiry** — deadline to fix (YYYY-MM-DD)
+
+Exceptions must have a concrete removal plan. Expired entries cause the check to fail.
+
 ## 📝 License
 
 MIT

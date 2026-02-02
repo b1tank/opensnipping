@@ -1,12 +1,16 @@
 # ipc
 
-Boundary: Tauri IPC glue.
+Boundary: Tauri IPC glue between frontend and backend.
 
-Intended contents:
-- `commands.rs`: `#[tauri::command]` entrypoints (thin wrappers)
-- `emit.rs`: event emission helpers
-- `errors.rs`: mapping from backend errors to domain errors/events
+## Files
 
-Rules:
-- Keep domain logic out of command handlers.
-- Every command must have explicit failure behavior (error code + message).
+- `mod.rs` — Module surface + re-exports
+- `commands.rs` — `#[tauri::command]` entrypoints (thin wrappers calling domain logic)
+- `emit.rs` — Event emission helpers (`emit_state_changed`, `emit_error`, etc.)
+- `errors.rs` — Error mapping from backend errors to IPC error responses
+
+## Rules
+
+- Keep domain logic out of command handlers (delegate to `state.rs`, `capture/*`)
+- Every command must have explicit failure behavior (error code + message)
+- Event emission goes through `emit.rs` helpers, not raw `app_handle.emit()`

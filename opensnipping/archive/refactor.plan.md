@@ -24,7 +24,7 @@ Current oversized files (must be reduced):
 - [x] Add a LOC gate script at `scripts/check-loc.sh` (default limit: 500 lines)
 - [x] Add `scripts/loc.allowlist.tsv` for temporary exceptions (path + reason + expiry)
 - [x] Add `npm run check:loc` to run the LOC gate locally
-- [ ] Add a short doc section describing how to handle exceptions (must include reason + expiry)
+- [x] Add a short doc section describing how to handle exceptions (must include reason + expiry)
 
 Success criteria:
 - Running `npm run check:loc` fails on new oversized files.
@@ -124,11 +124,11 @@ Success criteria:
 
 ## Phase 4 — Frontend boundary refactor (behavior preserved)
 
-- [ ] Create `src/tauri/commands.ts` to centralize `invoke("...")` names
-- [ ] Create `src/tauri/events.ts` (or a hook) to centralize event subscription
-- [ ] Update `App.tsx` to use wrappers (no logic changes)
-- [ ] Update `src/test/setup.ts` to mock the wrappers cleanly
-- [ ] Run `npm test` and `npm run build`
+- [x] Create `src/tauri/commands.ts` to centralize `invoke("...")` names
+- [x] Create `src/tauri/events.ts` (or a hook) to centralize event subscription
+- [x] Update `App.tsx` to use wrappers (no logic changes)
+- [x] Update `src/test/setup.ts` to mock the wrappers cleanly
+- [x] Run `npm test` and `npm run build`
 
 Success criteria:
 - `App.tsx` shrinks and UI logic becomes easier to test.

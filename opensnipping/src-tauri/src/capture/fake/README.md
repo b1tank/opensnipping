@@ -1,7 +1,19 @@
-# capture/fake (planned split)
+# capture/fake
 
-This folder is a landing zone for splitting `capture/fake.rs` into smaller modules.
+Fake capture backend for testing and development without real hardware.
 
-Rules:
-- Keep the fake backend deterministic and test-friendly.
-- Final goal: keep each module under 500 LOC.
+## Files
+
+- `mod.rs` — Module surface + re-exports
+- `backend.rs` — `FakeCaptureBackend` implementation
+- `tests/` — Test modules:
+  - `mod.rs` — Test module wiring
+  - `recording.rs` — Recording flow tests
+  - `screenshot.rs` — Screenshot flow tests
+  - `selection.rs` — Selection/portal mock tests
+
+## Rules
+
+- Keep each module under 500 LOC
+- Backend must be deterministic and side-effect-free
+- Tests should cover all state machine transitions

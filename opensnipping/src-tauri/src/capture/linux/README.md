@@ -1,7 +1,17 @@
-# capture/linux (planned split)
+# capture/linux
 
-This folder is a landing zone for splitting `capture/linux.rs` into smaller modules.
+Linux screen capture backend using PipeWire and the XDG Desktop Portal.
 
-Rules:
-- Do not add Rust module wiring here until the split is executed (to avoid compile ambiguity).
-- Final goal: keep each module under 500 LOC.
+## Files
+
+- `mod.rs` — Module surface + re-exports
+- `backend.rs` — `LinuxCaptureBackend` implementation (portal interaction, screenshot)
+- `encoding.rs` — Encoder/muxer detection helpers (H.264, VP8, audio codecs)
+- `pipeline.rs` — GStreamer recording pipeline implementation
+- `tests.rs` — Unit tests for encoder detection
+
+## Rules
+
+- Keep each module under 500 LOC
+- Public API is `LinuxCaptureBackend` only; internals are `pub(crate)` or private
+- Pipeline owns GStreamer lifecycle; backend owns portal session lifecycle
