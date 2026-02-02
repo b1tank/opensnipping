@@ -44,28 +44,9 @@ Dedicated implementation: write code, add tests, make atomic commits. Receive ta
 **Offer verification when (don't skip):**
 - New/changed UI components or user flows
 - Recording, screenshot, or media-related changes
-- Button wiring or event handling changes
 - Any change where "works" requires visual confirmation
 
-**Decision checklist:**
-1. Does this change what the user sees or interacts with? → Offer verification
-2. Can correctness be proven by tests alone? → Commit directly
-3. Uncertain? → Offer verification (costs nothing, prevents bugs)
-
-```
-[UI VERIFICATION RECOMMENDED]
-
-This change affects: [e.g., recording start/stop flow]
-
-Verification steps:
-1. `npm run tauri dev`
-2. [specific user action]
-3. [expected behavior]
-
-Want to verify before I commit? (I can proceed if you're confident)
-```
-
-Frame as opportunity, not blocker. If user is unresponsive, note "not verified" in commit and proceed.
+See [Commit and Push Policy](../copilot-instructions.md#commit-and-push-policy) for full verification decision flow.
 
 ## Pre-Commit Checks
 
@@ -77,32 +58,9 @@ Before committing, run through `diff-check` skill:
 
 ### Reviewer Invocation
 
-Invoke @reviewer before commit. Always suggest @explainer for educational summaries ("Want @explainer to summarize what changed?").
+See [Commit and Push Policy](../copilot-instructions.md#commit-and-push-policy) for full criteria.
 
-**Always require review (regardless of size):****
-| Category | Reason |
-|----------|--------|
-| `feat` | New features introduce complexity and risk |
-| `refactor` | Structural changes can break existing behavior |
-| `fix` (security/data) | Critical paths need extra scrutiny |
-
-**Size-based review triggers:**
-| Criterion | Threshold |
-|-----------|----------|
-| Lines changed | >50 |
-| Files modified | 3+ |
-| Structural changes | New/changed interfaces, traits, classes |
-| State machine | New states or transitions |
-| Cross-layer | Rust + TS beyond contract sync |
-| Core modules | Changes to shared utilities |
-
-**Skip review for:** docs-only, test-only, config/chore, contract-only (no runtime behavior).
-
-```
-[INVOKING REVIEWER]
-Reason: [which criterion triggered]
-Diff summary: [files and line count]
-```
+**Quick ref:** Always for `feat`/`refactor`, size-based for others (>50 lines or 3+ files). Skip for docs/test/chore/contract-only.
 
 ## Session Continuity
 
@@ -137,11 +95,10 @@ Good candidates: `git status`, `npm test`, `cargo check`, `ls`, `grep`
 
 ## Parallel Work Mode
 
-When running in a separate window (git worktree) for parallel work:
+When running in a separate window (git worktree):
 - Stay focused on assigned scope
 - Work on a feature branch, not main
 - Report completion to main session
 - Don't make changes outside assigned files
-- Coordinate if encountering blockers
 
-**Always rebase, never merge** when integrating back to main—keeps history linear.
+See [Git Worktree Workflow](../copilot-instructions.md#git-worktree-workflow) for rebase policy.

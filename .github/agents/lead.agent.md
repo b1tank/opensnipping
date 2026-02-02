@@ -43,25 +43,11 @@ When given a spec.md:
 
 ### When to invoke @reviewer
 
-Invoke @reviewer before commit. Always suggest @explainer for educational summaries ("Want @explainer to summarize what changed?").
+See [Commit and Push Policy](../copilot-instructions.md#commit-and-push-policy) for full criteria.
 
-**Always require review (regardless of size):**
-- `feat` — new features introduce complexity and risk
-- `refactor` — structural changes can break existing behavior
-- `fix` (security/data-related) — critical paths need extra scrutiny
+**Quick ref:** Always for `feat`/`refactor`, size-based for others (>50 lines or 3+ files).
 
-**Size-based triggers (any category):**
-- >50 lines changed or 3+ files modified
-- New/changed interfaces, traits, or classes
-- New state machine transitions or states
-- Cross-layer changes (Rust + TS beyond contract sync)
-- Changes to shared utilities or core modules
-
-**Additional triggers:**
-- User requests "grill me"
-- PR is ready for review
-
-**Skip review for:** docs-only, test-only, config/chore, contract-only (no runtime behavior).
+**Additional triggers:** User requests "grill me", or PR is ready for review.
 
 ## Task Decomposition
 
@@ -127,31 +113,9 @@ Recommendation: [option] because [reason]
 
 ## Pre-Commit UI Verification
 
-Before committing UI-affecting changes, evaluate verification need:
+See [Commit and Push Policy](../copilot-instructions.md#commit-and-push-policy) for verification decision flow.
 
-| Change Type | Verification | Action |
-|-------------|--------------|--------|
-| Contract-only (types, events) | Not needed | Commit directly |
-| Backend logic with tests | Not needed | Commit directly |
-| New UI component/behavior | **Recommended** | Offer verification |
-| Recording/screenshot flow | **Highly recommended** | Offer verification |
-| Visual styling changes | **Recommended** | Offer verification |
-
-**When verification is recommended:**
-```
-[UI VERIFICATION RECOMMENDED]
-
-This change affects: [user-visible behavior]
-
-Verification steps:
-1. `npm run tauri dev`
-2. [specific action to test]
-3. [expected result]
-
-Want to verify before I commit?
-```
-
-Don't block indefinitely—if user doesn't respond, remind once then proceed with caution note.
+**Quick ref:** Offer verification for UI changes; commit directly for backend/contract-only changes with tests.
 
 ## Handoff Format (to @engineer)
 
