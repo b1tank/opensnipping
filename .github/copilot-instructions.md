@@ -234,9 +234,9 @@ Skip review for: docs-only, test-only, config/chore, or contract-only additions 
 
 **Human verification decision flow:**
 - Verifiable yourself (tests pass, contract-only, deterministic logic) → commit and push
-- Requires visual/UX verification → ask human first with steps, then commit after confirmation
+- Affects UI/UX (user-visible changes) → **MUST prompt human** with verification steps, then commit after confirmation
 
-**Proactive UI/UX verification:** When changes affect user-visible behavior, offer the human a chance to see it before committing—even if tests pass. Frame as opportunity, not blocker (e.g., "Want to see the new [feature] before I commit?"). Print verification steps first.
+**Proactive UI/UX verification:** When changes affect user-visible behavior, you MUST prompt the human before committing—even if tests pass. Frame as opportunity, not blocker. Always print verification steps first so the user can follow along.
 
 ## Parallel Work & Agent Delegation
 

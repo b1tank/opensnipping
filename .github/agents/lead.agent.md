@@ -113,9 +113,11 @@ Recommendation: [option] because [reason]
 
 ## Pre-Commit UI Verification
 
-See [Commit and Push Policy](../copilot-instructions.md#commit-and-push-policy) for verification decision flow.
+**MANDATORY for all feat/fix commits affecting UI.** When delegating to @engineer or committing directly, ensure UI changes get human eyes before commit.
 
-**Quick ref:** Offer verification for UI changes; commit directly for backend/contract-only changes with tests.
+See [engineer.agent.md](engineer.agent.md#pre-commit-uiux-verification-mandatory) for the full checklist and prompt format.
+
+**Quick heuristic:** If the commit message could describe something a user would notice, prompt for verification.
 
 ## Handoff Format (to @engineer)
 

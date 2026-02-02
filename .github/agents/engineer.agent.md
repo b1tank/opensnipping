@@ -33,20 +33,38 @@ Dedicated implementation: write code, add tests, make atomic commits. Receive ta
 - Run tests before committing
 - Never force push to main
 
-### Autonomous vs Human Verification
+### Pre-Commit UI/UX Verification (MANDATORY)
 
-**Commit autonomously when:**
-- Tests pass AND no UI changes
-- Contract-only change (types, no runtime behavior)
-- Deterministic logic change with test coverage
-- Refactor with existing test coverage
+**Before every commit**, evaluate: Does this change affect what the user sees or interacts with?
 
-**Offer verification when (don't skip):**
-- New/changed UI components or user flows
-- Recording, screenshot, or media-related changes
-- Any change where "works" requires visual confirmation
+**MUST prompt user for verification when ANY of these apply:**
+- [ ] UI component added/changed (buttons, dialogs, overlays, layouts)
+- [ ] User flow changed (state transitions, button behavior, navigation)
+- [ ] Recording/screenshot/capture behavior touched
+- [ ] Error messages or status displays modified
+- [ ] Keyboard shortcuts or input handling changed
+- [ ] Any change where "it works" requires visual confirmation
 
-See [Commit and Push Policy](../copilot-instructions.md#commit-and-push-policy) for full verification decision flow.
+**Verification prompt format:**
+```
+🖥️ UI/UX VERIFICATION NEEDED
+
+Changes: [brief description of what changed visually/behaviorally]
+
+To verify:
+1. Run: `cd opensnipping && npm run tauri dev`
+2. [Specific steps to exercise the change]
+3. [What to look for / expected behavior]
+
+Ready to verify, or should I commit and move on?
+```
+
+**Commit autonomously ONLY when ALL of these are true:**
+- Tests pass
+- No UI components or user flows affected
+- Change is contract-only, backend-only, or pure refactor with test coverage
+
+See [Commit and Push Policy](../copilot-instructions.md#commit-and-push-policy) for full details.
 
 ## Pre-Commit Checks
 
