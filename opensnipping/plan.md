@@ -260,6 +260,40 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
 
 **Done when**: user can record screen/window/region to MP4/MKV with pause/resume.
 
+### Milestone 4.5 — Fix Critical Recording & Screenshot Bugs (1-2 days)
+
+**Root cause analysis completed 2026-02-01 via @ui-tester verification.**
+
+#### Issue A: Screenshot Image Loading Fails
+- **Symptom**: AnnotationCanvas shows "Failed to load image: /tmp/opensnipping-*.png"
+- **Root cause**: Tauri's asset protocol is not enabled; `convertFileSrc()` generates URLs webview can't load
+- **Fix tasks**:
+  - [ ] A1. Enable `protocol-asset` feature in `src-tauri/Cargo.toml`: `tauri = { version = "2", features = ["protocol-asset"] }`
+  - [ ] A2. Add filesystem permission scope in `capabilities/default.json`: `"fs:allow-read-text-file"` with `/tmp` scope (or use `fs:default` + configure scope)
+  - [ ] A3. Verify: screenshot → annotation overlay loads image correctly
+
+#### Issue B: Recording Creates Empty MP4 Files
+- **Symptom**: `/tmp/opensnipping-*.mp4` files are 0 bytes
+- **Root cause**: ashpd `Session` handle dropped after `request_selection()`, portal closes stream, `node_id` becomes invalid
+- **Fix tasks**:
+  - [ ] B1. Modify `ActiveSession` in `capture/linux/backend.rs` to store the ashpd `Session` handle (not just metadata)
+  - [ ] B2. Keep session alive: don't drop until `cancel_selection()` or recording stops
+  - [ ] B3. Update `request_selection()` to move session into `ActiveSession`
+  - [ ] B4. Update `stop_recording()` to clean up the stored session
+  - [ ] B5. Verify: 5-second recording produces non-empty MP4 with video frames
+
+#### Issue C: Pause/Stop Error "No recording in progress"
+- **Symptom**: State transitions succeed but GStreamer commands fail
+- **Root cause**: Downstream effect of Issue B; pipeline has no frames to process
+- **Fix tasks**:
+  - [ ] C1. After fixing B, verify pause/stop work correctly
+  - [ ] C2. (If still failing) Add pipeline health check in `start()`: verify first frame received before returning Ok
+  - [ ] C3. Improve error propagation: surface GStreamer errors to UI immediately
+
+**Done when**: Screenshot annotation loads images; recordings produce playable MP4s; pause/stop work without errors.
+
+---
+
 ### Milestone 5 — Add Audio (system + mic) + Sync (2–4 days)
 - [x] 20. Add microphone audio source and encode (AAC/Opus depending on container):
    - MP4: AAC recommended
