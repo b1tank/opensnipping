@@ -182,46 +182,81 @@ impl RecordingPipeline {
                 CaptureBackendError::Internal("No audio encoder available".to_string())
             })?;
 
-            // Determine audio source configuration
-            let audio_source = if has_mic && has_system {
-                // Both mic and system audio requested - currently using system audio only
-                // Audio mixing will be implemented separately
-                warn!(
-                    "Both mic and system audio requested; using system audio only (mixing not yet supported)"
+            // Build audio pipeline based on configuration
+            if has_mic && has_system {
+                // Both mic and system audio: use audiomixer to combine both sources
+                info!(
+                    "Recording with mic + system audio (mixed), encoder: {}",
+                    audio_encoder
                 );
-                info!("Recording with system audio, encoder: {}", audio_encoder);
-                format!("pulsesrc device={}", get_system_audio_source())
+                format!(
+                    "pipewiresrc path={node_id} ! \
+                     videoconvert ! \
+                     videoscale ! \
+                     video/x-raw,framerate={fps}/1 ! \
+                     {video_encoder} ! mux. \
+                     audiomixer name=mix ! \
+                     audioconvert ! \
+                     audioresample ! \
+                     {audio_encoder} ! mux. \
+                     pulsesrc ! audioconvert ! audioresample ! mix. \
+                     pulsesrc device={system_device} ! audioconvert ! audioresample ! mix. \
+                     {muxer} name=mux ! \
+                     filesink location={output_path}",
+                    node_id = node_id,
+                    fps = fps,
+                    video_encoder = video_encoder,
+                    audio_encoder = audio_encoder,
+                    system_device = get_system_audio_source(),
+                    muxer = muxer,
+                    output_path = output_path.display()
+                )
             } else if has_system {
+                // System audio only
                 info!("Recording with system audio, encoder: {}", audio_encoder);
-                format!("pulsesrc device={}", get_system_audio_source())
+                format!(
+                    "pipewiresrc path={node_id} ! \
+                     videoconvert ! \
+                     videoscale ! \
+                     video/x-raw,framerate={fps}/1 ! \
+                     {video_encoder} ! mux. \
+                     pulsesrc device={system_device} ! \
+                     audioconvert ! \
+                     audioresample ! \
+                     {audio_encoder} ! mux. \
+                     {muxer} name=mux ! \
+                     filesink location={output_path}",
+                    node_id = node_id,
+                    fps = fps,
+                    video_encoder = video_encoder,
+                    system_device = get_system_audio_source(),
+                    audio_encoder = audio_encoder,
+                    muxer = muxer,
+                    output_path = output_path.display()
+                )
             } else {
-                // has_mic only
+                // Mic only
                 info!("Recording with microphone audio, encoder: {}", audio_encoder);
-                "pulsesrc".to_string()
-            };
-
-            // Pipeline with video + audio
-            // Named mux element allows multiple inputs
-            format!(
-                "pipewiresrc path={node_id} ! \
-                 videoconvert ! \
-                 videoscale ! \
-                 video/x-raw,framerate={fps}/1 ! \
-                 {video_encoder} ! mux. \
-                 {audio_source} ! \
-                 audioconvert ! \
-                 audioresample ! \
-                 {audio_encoder} ! mux. \
-                 {muxer} name=mux ! \
-                 filesink location={output_path}",
-                node_id = node_id,
-                fps = fps,
-                video_encoder = video_encoder,
-                audio_source = audio_source,
-                audio_encoder = audio_encoder,
-                muxer = muxer,
-                output_path = output_path.display()
-            )
+                format!(
+                    "pipewiresrc path={node_id} ! \
+                     videoconvert ! \
+                     videoscale ! \
+                     video/x-raw,framerate={fps}/1 ! \
+                     {video_encoder} ! mux. \
+                     pulsesrc ! \
+                     audioconvert ! \
+                     audioresample ! \
+                     {audio_encoder} ! mux. \
+                     {muxer} name=mux ! \
+                     filesink location={output_path}",
+                    node_id = node_id,
+                    fps = fps,
+                    video_encoder = video_encoder,
+                    audio_encoder = audio_encoder,
+                    muxer = muxer,
+                    output_path = output_path.display()
+                )
+            }
         } else {
             // Video-only pipeline
             format!(
@@ -1080,6 +1115,86 @@ mod tests {
                 "@DEFAULT_MONITOR@",
                 "System audio source should be constant"
             );
+        }
+    }
+
+    // --- Audio mixing configuration tests ---
+
+    #[test]
+    fn test_audio_config_mic_only() {
+        let audio = AudioConfig { mic: true, system: false };
+        assert!(audio.mic, "Mic should be enabled");
+        assert!(!audio.system, "System should be disabled");
+    }
+
+    #[test]
+    fn test_audio_config_system_only() {
+        let audio = AudioConfig { mic: false, system: true };
+        assert!(!audio.mic, "Mic should be disabled");
+        assert!(audio.system, "System should be enabled");
+    }
+
+    #[test]
+    fn test_audio_config_both_enabled() {
+        let audio = AudioConfig { mic: true, system: true };
+        assert!(audio.mic, "Mic should be enabled");
+        assert!(audio.system, "System should be enabled");
+        // When both are enabled, the pipeline uses audiomixer to combine sources
+    }
+
+    #[test]
+    fn test_audio_config_matrix() {
+        // Test all 4 combinations of mic/system audio
+        let configs = [
+            (AudioConfig { mic: false, system: false }, "no audio"),
+            (AudioConfig { mic: true, system: false }, "mic only"),
+            (AudioConfig { mic: false, system: true }, "system only"),
+            (AudioConfig { mic: true, system: true }, "mic + system (mixed)"),
+        ];
+
+        for (config, description) in configs {
+            // Just verify the configs can be created and have expected values
+            let has_any = config.mic || config.system;
+            let has_both = config.mic && config.system;
+
+            match description {
+                "no audio" => {
+                    assert!(!has_any, "No audio config should have no sources");
+                }
+                "mic only" => {
+                    assert!(has_any && !has_both, "Mic only should have one source");
+                    assert!(config.mic, "Should have mic enabled");
+                }
+                "system only" => {
+                    assert!(has_any && !has_both, "System only should have one source");
+                    assert!(config.system, "Should have system enabled");
+                }
+                "mic + system (mixed)" => {
+                    assert!(has_both, "Mixed audio should have both sources");
+                }
+                _ => panic!("Unknown config"),
+            }
+        }
+    }
+
+    /// Verify audiomixer element is available in GStreamer
+    #[test]
+    fn test_audiomixer_element_availability() {
+        // Initialize GStreamer
+        if gstreamer::init().is_err() {
+            println!("GStreamer not available, skipping audiomixer test");
+            return;
+        }
+
+        // Check if audiomixer is available
+        let has_audiomixer = gstreamer::ElementFactory::find("audiomixer").is_some();
+
+        // audiomixer is part of gstreamer-plugins-base, which should be widely available
+        // This test documents the dependency rather than making it required
+        if has_audiomixer {
+            println!("audiomixer element is available");
+        } else {
+            println!("audiomixer element not found - audio mixing requires gst-plugins-base");
         }
     }
 

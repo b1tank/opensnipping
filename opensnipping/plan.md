@@ -267,7 +267,7 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
 - [x] 21. Add system audio capture:
    - prefer: portal-provided audio with the screencast session if available
    - fallback: PulseAudio monitor source (X11 / non-portal environments)
-- [ ] 22. Mix mic + system (if both enabled).
+- [x] 22. Mix mic + system (if both enabled).
 - [ ] 23. Verify A/V sync over a 10–20 minute recording.
 - [ ] 24. Add tests:
    - Rust: config matrix tests (mic only / system only / both)
