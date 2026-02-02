@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
-use crate::state::{CaptureState, CaptureError};
 use crate::capture::SelectionResult;
+use crate::state::{CaptureError, CaptureState};
+use serde::{Deserialize, Serialize};
 
 /// Event emitted when capture state changes
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -91,37 +91,37 @@ impl StateMachine {
     /// Validate and perform state transition
     fn transition(&mut self, to: CaptureState) -> Result<CaptureState, TransitionError> {
         let from = self.state;
-        
+
         let valid = match (from, to) {
             // From Idle
             (CaptureState::Idle, CaptureState::Selecting) => true,
             (CaptureState::Idle, CaptureState::Error) => true,
-            
+
             // From Selecting
             (CaptureState::Selecting, CaptureState::Recording) => true,
             (CaptureState::Selecting, CaptureState::Idle) => true, // cancelled
             (CaptureState::Selecting, CaptureState::Error) => true,
-            
+
             // From Recording
             (CaptureState::Recording, CaptureState::Paused) => true,
             (CaptureState::Recording, CaptureState::Finalizing) => true,
             (CaptureState::Recording, CaptureState::Error) => true,
-            
+
             // From Paused
             (CaptureState::Paused, CaptureState::Recording) => true,
             (CaptureState::Paused, CaptureState::Finalizing) => true,
             (CaptureState::Paused, CaptureState::Error) => true,
-            
+
             // From Finalizing
             (CaptureState::Finalizing, CaptureState::Idle) => true,
             (CaptureState::Finalizing, CaptureState::Error) => true,
-            
+
             // From Error
             (CaptureState::Error, CaptureState::Idle) => true, // reset
-            
+
             // Same state is always valid (no-op)
             (a, b) if a == b => true,
-            
+
             _ => false,
         };
 
@@ -201,27 +201,27 @@ mod tests {
     #[test]
     fn test_valid_full_recording_flow() {
         let mut sm = StateMachine::new();
-        
+
         // Idle → Selecting
         assert!(sm.start_selecting().is_ok());
         assert_eq!(sm.state(), CaptureState::Selecting);
-        
+
         // Selecting → Recording
         assert!(sm.begin_recording().is_ok());
         assert_eq!(sm.state(), CaptureState::Recording);
-        
+
         // Recording → Paused
         assert!(sm.pause().is_ok());
         assert_eq!(sm.state(), CaptureState::Paused);
-        
+
         // Paused → Recording
         assert!(sm.resume().is_ok());
         assert_eq!(sm.state(), CaptureState::Recording);
-        
+
         // Recording → Finalizing
         assert!(sm.stop().is_ok());
         assert_eq!(sm.state(), CaptureState::Finalizing);
-        
+
         // Finalizing → Idle
         assert!(sm.finalize_complete().is_ok());
         assert_eq!(sm.state(), CaptureState::Idle);
@@ -262,16 +262,16 @@ mod tests {
     fn test_error_state_and_reset() {
         let mut sm = StateMachine::new();
         sm.start_selecting().unwrap();
-        
+
         sm.set_error(CaptureError {
             code: ErrorCode::PortalError,
             message: "Portal denied access".to_string(),
         });
-        
+
         assert_eq!(sm.state(), CaptureState::Error);
         assert!(sm.last_error().is_some());
         assert_eq!(sm.last_error().unwrap().code, ErrorCode::PortalError);
-        
+
         // Reset from error
         assert!(sm.reset().is_ok());
         assert_eq!(sm.state(), CaptureState::Idle);
@@ -283,7 +283,7 @@ mod tests {
         sm.start_selecting().unwrap();
         sm.begin_recording().unwrap();
         sm.pause().unwrap();
-        
+
         assert!(sm.stop().is_ok());
         assert_eq!(sm.state(), CaptureState::Finalizing);
     }
@@ -293,7 +293,7 @@ mod tests {
         let mut sm = StateMachine::new();
         sm.start_selecting().unwrap();
         sm.begin_recording().unwrap();
-        
+
         // Calling begin_recording again should be a no-op
         let result = sm.transition(CaptureState::Recording);
         assert!(result.is_ok());

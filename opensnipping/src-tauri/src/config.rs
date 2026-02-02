@@ -160,10 +160,22 @@ mod tests {
     #[test]
     fn test_audio_config_combinations() {
         // Test that AudioConfig correctly represents all audio states
-        let no_audio = AudioConfig { system: false, mic: false };
-        let mic_only = AudioConfig { system: false, mic: true };
-        let system_only = AudioConfig { system: true, mic: false };
-        let both_audio = AudioConfig { system: true, mic: true };
+        let no_audio = AudioConfig {
+            system: false,
+            mic: false,
+        };
+        let mic_only = AudioConfig {
+            system: false,
+            mic: true,
+        };
+        let system_only = AudioConfig {
+            system: true,
+            mic: false,
+        };
+        let both_audio = AudioConfig {
+            system: true,
+            mic: true,
+        };
 
         // No audio
         assert!(!no_audio.system && !no_audio.mic);
