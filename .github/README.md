@@ -21,6 +21,7 @@ AI agent configuration for this repository. For the full architecture reference,
 | `@lead` | Tech lead — orchestrates work, generates plan.md |
 | `@engineer` | Software engineer — dedicated implementation |
 | `@reviewer` | Code reviewer — critical "grill me" feedback |
+| `@refactor` | Architecture & maintainability — small safe refactors |
 
 ### Skills (procedures)
 
