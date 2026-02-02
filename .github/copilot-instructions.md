@@ -308,13 +308,12 @@ When explaining code or changes:
 
 `~/skills/` is the source of truth for reusable agents, prompts, and skills.
 
-**After improving agents/prompts/skills in this repo:**
+**After improving agents/prompts in this repo:**
 
 ```bash
 # 1. Copy improvements back to source
 cp .github/agents/<name>.agent.md ~/skills/agents/
 cp .github/prompts/<name>.prompt.md ~/skills/prompts/
-cp -r .github/skills/<name>/ ~/skills/skills/
 
 # 2. Commit and push source repo
 cd ~/skills && git add . && git commit -m "agent: <description>" && git push
