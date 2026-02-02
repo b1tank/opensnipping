@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "check:loc": "bash scripts/check-loc.sh",
     "test": "vitest run",
     "test:watch": "vitest"
   },
