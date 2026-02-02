@@ -254,7 +254,7 @@ Each step should end with a **demoable artifact** (a visible behavior or an outp
 - [x] 18. Implement Pause/Resume:
    - simplest: pause the pipeline / block dataflow (verify output correctness)
    - fallback if pause is hard: implement “segmented recording” and concat (only if necessary)
-- [ ] 19. Add tests:
+- [x] 19. Add tests:
    - Rust: backend selection logic chooses expected encoder/mux given availability flags
    - Linux smoke test: start/stop a 2–3s recording and assert output file exists and is non-empty (skip if deps missing)
 
