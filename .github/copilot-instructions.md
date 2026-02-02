@@ -273,6 +273,7 @@ Available prompts:
 - `/new-agent`: Create new agent → @lead
 - `/work-on-next`: Next task → @lead
 - `/self-improve`: Improve agent setup
+- `/verify-ux`: Start app locally and verify UX
 
 When uncertain:
 - Read `opensnipping/spec.md` and `opensnipping/plan.md` first
