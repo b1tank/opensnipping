@@ -95,7 +95,9 @@ pub trait CaptureBackend: Send + Sync {
     ) -> impl std::future::Future<Output = Result<SelectionResult, CaptureBackendError>> + Send;
 
     /// Cancel an ongoing selection (if supported)
-    fn cancel_selection(&self) -> impl std::future::Future<Output = Result<(), CaptureBackendError>> + Send;
+    fn cancel_selection(
+        &self,
+    ) -> impl std::future::Future<Output = Result<(), CaptureBackendError>> + Send;
 
     /// Capture a screenshot from the given selection and save to output_path
     ///
