@@ -1,51 +1,20 @@
 ---
 name: verify-ux
-description: Start the app locally and verify UX works based on user input or latest features.
+description: Verify UX by invoking @ui-tester agent with optional feature specification.
 ---
 
-Launch the app and verify user-facing behavior works correctly.
+Invoke @ui-tester to verify user-facing behavior.
 
-## Start the App
+## Usage
 
-```bash
-cd opensnipping && npm run tauri dev
-```
+- `/verify-ux` — Auto-detect recent UI changes and verify
+- `/verify-ux [feature]` — Verify specific feature (e.g., "start capture button")
 
-Wait for the app window to appear before proceeding.
+## What Happens
 
-## Determine What to Verify
-
-**Option A: User specifies feature**
-- Verify the exact feature/flow mentioned
-
-**Option B: Latest changes (default)**
-- Check recent commits: `git log --oneline -5`
-- Identify user-facing changes (UI, interactions, state transitions)
-- Skip if only backend/test/doc changes with no visible effect
-
-## Verification Steps
-
-For each feature to verify:
-
-1. **Print clear steps** for the user to follow:
-   ```
-   Verification: [Feature Name]
-   1. [Action to take]
-   2. [Expected result]
-   3. [Action to take]
-   4. [Expected result]
-   ```
-
-2. **Wait for user confirmation**:
-   - ✓ Works as expected
-   - ✗ Issue found (describe)
-
-3. **If issues found**:
-   - Log the problem
-   - Offer to create a fix task or investigate immediately
-
-## After Verification
-
-- Summarize what was verified
-- Note any issues to address
-- Suggest next steps (commit, fix, or continue development)
+@ui-tester will:
+1. Start the app (`npm run tauri dev`)
+2. Connect MCP Bridge (or fall back to manual verification)
+3. Capture screenshots and DOM state
+4. Verify elements and interactions
+5. Report pass/fail with evidence

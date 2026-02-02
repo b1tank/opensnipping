@@ -276,11 +276,13 @@ Available agents:
 - **engineer** (`.github/agents/engineer.agent.md`): Dedicated implementation—writes code, tests, commits
 - **reviewer** (`.github/agents/reviewer.agent.md`): Code reviewer—critical "grill me" feedback
 - **explainer** (`.github/agents/explainer.agent.md`): Educational—explains changes with diagrams and visuals
+- **ui-tester** (`.github/agents/ui-tester.agent.md`): Automated UX verification via MCP Bridge
 
 Available skills:
 - **decompose-task**: Break large tasks (>100 lines) into atomic sub-tasks
 - **diff-check**: Author cleanup before commit/PR submit
 - **tauri-contract** (`.github/skills/tauri-contract/SKILL.md`): TS ⇄ Rust contract sync
+- **tauri-mcp-bridge** (`.github/skills/tauri-mcp-bridge/SKILL.md`): MCP Bridge setup and tool reference
 
 Available prompts:
 - `/new-project`: Start new project → @product-designer
