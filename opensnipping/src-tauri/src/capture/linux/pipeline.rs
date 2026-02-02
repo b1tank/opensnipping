@@ -30,8 +30,9 @@ impl RecordingPipeline {
     /// - Audio (if both enabled): mix handled separately (see task 22)
     pub fn new(
         node_id: u32,
+        stream_fd: Option<i32>,
         output_path: std::path::PathBuf,
-        fps: u8,
+        _fps: u8,
         container: ContainerFormat,
         audio: &AudioConfig,
         width: Option<u32>,
@@ -55,6 +56,19 @@ impl RecordingPipeline {
         let has_system = audio.system;
         let has_any_audio = has_mic || has_system;
 
+        // Build pipewiresrc element string with fd if available
+        // NOTE: When using portal fd, we should use fd alone OR fd+path
+        // Testing shows fd alone may work better with portal streams
+        let pipewiresrc = if let Some(fd) = stream_fd {
+            eprintln!("[DEBUG] RecordingPipeline: Using fd={} path={}", fd, node_id);
+            // Use both fd and path - fd is the pipewire connection, path is the node
+            // Add client-name for debugging
+            format!("pipewiresrc fd={} path={} client-name=opensnipping", fd, node_id)
+        } else {
+            eprintln!("[DEBUG] RecordingPipeline: Using path={} only (no fd)", node_id);
+            format!("pipewiresrc path={} client-name=opensnipping", node_id)
+        };
+
         // Build pipeline description
         // When audio is enabled, we use a named muxer so both branches can link to it
         let pipeline_str = if has_any_audio {
@@ -71,10 +85,9 @@ impl RecordingPipeline {
                     audio_encoder
                 );
                 format!(
-                    "pipewiresrc path={node_id} ! \
+                    "{pipewiresrc} ! \
                      videoconvert ! \
                      videoscale ! \
-                     video/x-raw,framerate={fps}/1 ! \
                      {video_encoder} ! mux. \
                      audiomixer name=mix ! \
                      audioconvert ! \
@@ -84,8 +97,7 @@ impl RecordingPipeline {
                      pulsesrc device={system_device} ! audioconvert ! audioresample ! mix. \
                      {muxer} name=mux ! \
                      filesink location={output_path}",
-                    node_id = node_id,
-                    fps = fps,
+                    pipewiresrc = pipewiresrc,
                     video_encoder = video_encoder,
                     audio_encoder = audio_encoder,
                     system_device = get_system_audio_source(),
@@ -96,10 +108,9 @@ impl RecordingPipeline {
                 // System audio only
                 info!("Recording with system audio, encoder: {}", audio_encoder);
                 format!(
-                    "pipewiresrc path={node_id} ! \
+                    "{pipewiresrc} ! \
                      videoconvert ! \
                      videoscale ! \
-                     video/x-raw,framerate={fps}/1 ! \
                      {video_encoder} ! mux. \
                      pulsesrc device={system_device} ! \
                      audioconvert ! \
@@ -107,8 +118,7 @@ impl RecordingPipeline {
                      {audio_encoder} ! mux. \
                      {muxer} name=mux ! \
                      filesink location={output_path}",
-                    node_id = node_id,
-                    fps = fps,
+                    pipewiresrc = pipewiresrc,
                     video_encoder = video_encoder,
                     system_device = get_system_audio_source(),
                     audio_encoder = audio_encoder,
@@ -122,10 +132,9 @@ impl RecordingPipeline {
                     audio_encoder
                 );
                 format!(
-                    "pipewiresrc path={node_id} ! \
+                    "{pipewiresrc} ! \
                      videoconvert ! \
                      videoscale ! \
-                     video/x-raw,framerate={fps}/1 ! \
                      {video_encoder} ! mux. \
                      pulsesrc ! \
                      audioconvert ! \
@@ -133,8 +142,7 @@ impl RecordingPipeline {
                      {audio_encoder} ! mux. \
                      {muxer} name=mux ! \
                      filesink location={output_path}",
-                    node_id = node_id,
-                    fps = fps,
+                    pipewiresrc = pipewiresrc,
                     video_encoder = video_encoder,
                     audio_encoder = audio_encoder,
                     muxer = muxer,
@@ -144,15 +152,13 @@ impl RecordingPipeline {
         } else {
             // Video-only pipeline
             format!(
-                "pipewiresrc path={node_id} ! \
+                "{pipewiresrc} ! \
                  videoconvert ! \
                  videoscale ! \
-                 video/x-raw,framerate={fps}/1 ! \
                  {video_encoder} ! \
                  {muxer} ! \
                  filesink location={output_path}",
-                node_id = node_id,
-                fps = fps,
+                pipewiresrc = pipewiresrc,
                 video_encoder = video_encoder,
                 muxer = muxer,
                 output_path = output_path.display()
@@ -160,6 +166,7 @@ impl RecordingPipeline {
         };
 
         debug!("Creating recording pipeline: {}", pipeline_str);
+        eprintln!("[DEBUG] RecordingPipeline::new: Pipeline desc: {}", pipeline_str);
 
         let pipeline = gstreamer::parse::launch(&pipeline_str).map_err(|e| {
             CaptureBackendError::Internal(format!("Failed to create pipeline: {}", e))
@@ -182,13 +189,39 @@ impl RecordingPipeline {
     pub fn start(&mut self) -> Result<(), CaptureBackendError> {
         info!("Starting recording pipeline to {:?}", self.output_path);
 
+        // First try PAUSED to check if pipeline can link
+        eprintln!("[DEBUG] RecordingPipeline::start: Setting pipeline to PAUSED first...");
+        self.pipeline
+            .set_state(gstreamer::State::Paused)
+            .map_err(|e| {
+                // Check bus for more detailed error
+                if let Some(bus) = self.pipeline.bus() {
+                    while let Some(msg) = bus.pop() {
+                        if let gstreamer::MessageView::Error(err) = msg.view() {
+                            eprintln!("[DEBUG] GStreamer error: {:?} - {:?}", err.error(), err.debug());
+                        }
+                    }
+                }
+                CaptureBackendError::Internal(format!("Failed to pause pipeline for linking: {}", e))
+            })?;
+
+        eprintln!("[DEBUG] RecordingPipeline::start: PAUSED succeeded, now PLAYING...");
         self.pipeline
             .set_state(gstreamer::State::Playing)
             .map_err(|e| {
+                // Check bus for more detailed error
+                if let Some(bus) = self.pipeline.bus() {
+                    while let Some(msg) = bus.pop() {
+                        if let gstreamer::MessageView::Error(err) = msg.view() {
+                            eprintln!("[DEBUG] GStreamer error: {:?} - {:?}", err.error(), err.debug());
+                        }
+                    }
+                }
                 CaptureBackendError::Internal(format!("Failed to start pipeline: {}", e))
             })?;
 
         self.start_time = Some(std::time::Instant::now());
+        eprintln!("[DEBUG] RecordingPipeline::start: Pipeline started successfully");
         Ok(())
     }
 

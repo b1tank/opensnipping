@@ -60,7 +60,12 @@ pub(crate) async fn start_capture(
     info!("Starting portal selection...");
 
     // Now call the portal (this shows the picker dialog)
+    // Use the concrete Linux backend so we can store it with the session
+    #[cfg(target_os = "linux")]
+    let backend = capture::linux::LinuxCaptureBackend::new();
+    #[cfg(not(target_os = "linux"))]
     let backend = capture::get_backend();
+    
     let selection_result = backend.request_selection(&config).await;
 
     match selection_result {
@@ -70,21 +75,68 @@ pub(crate) async fn start_capture(
             // Store selection result
             *state.selection.lock().unwrap() = Some(selection.clone());
 
+            // IMPORTANT: Start recording immediately while PipeWire stream is valid
+            // Don't wait for a separate start_recording_video call
+            #[cfg(target_os = "linux")]
+            let recording_success = {
+                eprintln!("[DEBUG] start_capture: Starting recording immediately after selection...");
+                match backend.start_recording(&selection, &config).await {
+                    Ok(()) => {
+                        info!("Recording started immediately: {}", config.output_path);
+                        
+                        // Emit recording started event
+                        let _ = app.emit(
+                            event_names::RECORDING_STARTED,
+                            RecordingStartedEvent {
+                                output_path: config.output_path.clone(),
+                            },
+                        );
+
+                        // Store backend for pause/resume/stop operations
+                        let mut backend_lock = state.backend.lock().await;
+                        *backend_lock = Some(backend);
+                        
+                        true
+                    }
+                    Err(e) => {
+                        eprintln!("[DEBUG] start_capture: Failed to start recording: {:?}", e);
+                        let error = backend_error_to_capture_error(&e);
+                        emit_error(&app, &error);
+                        false
+                    }
+                }
+            };
+
+            #[cfg(not(target_os = "linux"))]
+            let recording_success = true; // Non-Linux doesn't start recording here
+
             // Emit selection complete event
             let _ = app.emit(
                 event_names::SELECTION_COMPLETE,
                 SelectionCompleteEvent { selection },
             );
 
-            // Transition to Recording
-            let mut sm = state.state_machine.lock().unwrap();
-            let previous = sm.state();
-            match sm.begin_recording() {
-                Ok(new_state) => {
-                    emit_state_change(&app, previous, new_state);
-                    Ok(new_state)
+            // Only transition to Recording if recording actually started
+            if recording_success {
+                let mut sm = state.state_machine.lock().unwrap();
+                let previous = sm.state();
+                match sm.begin_recording() {
+                    Ok(new_state) => {
+                        emit_state_change(&app, previous, new_state);
+                        Ok(new_state)
+                    }
+                    Err(e) => Err(e.message),
                 }
-                Err(e) => Err(e.message),
+            } else {
+                // Recording failed - transition to Error state
+                let mut sm = state.state_machine.lock().unwrap();
+                let error = CaptureError {
+                    code: ErrorCode::PipelineError,
+                    message: "Failed to start recording pipeline".to_string(),
+                };
+                sm.set_error(error.clone());
+                emit_error(&app, &error);
+                Err(error.message)
             }
         }
         Err(backend_err) => {
@@ -354,7 +406,7 @@ pub(crate) async fn start_recording_video(
     app: AppHandle,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), String> {
-    info!("Starting video recording...");
+    eprintln!("[DEBUG] start_recording_video: Starting video recording...");
 
     // Get stored config and selection
     let config = state
@@ -363,6 +415,7 @@ pub(crate) async fn start_recording_video(
         .unwrap()
         .clone()
         .ok_or_else(|| "No capture config set. Call start_capture first.".to_string())?;
+    eprintln!("[DEBUG] start_recording_video: Got config, output_path={}", config.output_path);
 
     let selection = state
         .selection
@@ -370,18 +423,21 @@ pub(crate) async fn start_recording_video(
         .unwrap()
         .clone()
         .ok_or_else(|| "No selection available. Call start_capture first.".to_string())?;
+    eprintln!("[DEBUG] start_recording_video: Got selection, node_id={}", selection.node_id);
 
-    // Create and store backend instance
-    let backend = capture::linux::LinuxCaptureBackend::new();
+    // Get the stored backend (which holds the portal session)
+    eprintln!("[DEBUG] start_recording_video: Acquiring backend lock...");
+    let backend_lock = state.backend.lock().await;
+    eprintln!("[DEBUG] start_recording_video: Backend lock acquired, checking if backend exists...");
+    let backend = backend_lock
+        .as_ref()
+        .ok_or_else(|| "No backend available. Call start_capture first.".to_string())?;
+    eprintln!("[DEBUG] start_recording_video: Backend found, calling start_recording...");
 
-    // Start recording
+    // Start recording using the stored backend
     match backend.start_recording(&selection, &config).await {
         Ok(()) => {
-            info!("Recording started: {}", config.output_path);
-
-            // Store backend for later stop
-            let mut backend_lock = state.backend.lock().await;
-            *backend_lock = Some(backend);
+            eprintln!("[DEBUG] start_recording_video: Recording started successfully: {}", config.output_path);
 
             // Emit recording started event
             let _ = app.emit(
@@ -394,7 +450,7 @@ pub(crate) async fn start_recording_video(
             Ok(())
         }
         Err(backend_err) => {
-            info!("Recording start failed: {:?}", backend_err);
+            eprintln!("[DEBUG] start_recording_video: Recording start failed: {:?}", backend_err);
             let error = backend_error_to_capture_error(&backend_err);
             emit_error(&app, &error);
             Err(error.message)

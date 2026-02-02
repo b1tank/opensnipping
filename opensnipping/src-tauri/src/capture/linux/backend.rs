@@ -4,6 +4,7 @@ use crate::capture::{
 use crate::config::{CaptureConfig, CaptureSource};
 use ashpd::desktop::screencast::{CursorMode, Screencast, SourceType};
 use ashpd::desktop::{PersistMode, Session};
+use std::os::fd::{AsRawFd, OwnedFd};
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
@@ -23,18 +24,24 @@ pub struct LinuxCaptureBackend {
 
 /// Holds an active screencast session
 pub(super) struct ActiveSession {
+    /// The ashpd screencast proxy - MUST be kept alive (leaked for 'static)
+    #[allow(dead_code)]
+    _screencast: &'static Screencast<'static>,
     /// The ashpd session - MUST be kept alive for the stream to remain valid
     #[allow(dead_code)]
-    session: Session<'static, Screencast<'static>>,
+    _session: Session<'static, Screencast<'static>>,
     /// PipeWire node ID (stored for future use in recording pipeline)
     #[allow(dead_code)]
     node_id: u32,
+    /// PipeWire remote fd - this is the key to keeping the stream alive
+    pipewire_fd: OwnedFd,
 }
 
 impl std::fmt::Debug for ActiveSession {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ActiveSession")
             .field("node_id", &self.node_id)
+            .field("pipewire_fd", &self.pipewire_fd.as_raw_fd())
             .finish()
     }
 }
@@ -81,15 +88,18 @@ impl CaptureBackend for LinuxCaptureBackend {
     ) -> Result<SelectionResult, CaptureBackendError> {
         info!("Requesting screen selection via portal");
 
-        // Create screencast proxy
-        let screencast = Screencast::new().await.map_err(|e| {
-            CaptureBackendError::PortalError(format!(
-                "Failed to connect to screencast portal: {}",
-                e
-            ))
-        })?;
+        // Create screencast proxy and leak it for 'static lifetime
+        // This is necessary because Session borrows from Screencast
+        let screencast: &'static Screencast<'static> = Box::leak(Box::new(
+            Screencast::new().await.map_err(|e| {
+                CaptureBackendError::PortalError(format!(
+                    "Failed to connect to screencast portal: {}",
+                    e
+                ))
+            })?,
+        ));
 
-        // Create session
+        // Create session (borrows from leaked screencast)
         let session = screencast.create_session().await.map_err(|e| {
             CaptureBackendError::PortalError(format!("Failed to create session: {}", e))
         })?;
@@ -164,11 +174,20 @@ impl CaptureBackend for LinuxCaptureBackend {
             stream.size()
         );
 
-        // Store session to keep the portal stream alive
+        // Get PipeWire fd - this is crucial for GStreamer to connect to the stream
+        let pipewire_fd = screencast.open_pipe_wire_remote(&session).await.map_err(|e| {
+            CaptureBackendError::PortalError(format!("Failed to open PipeWire remote: {}", e))
+        })?;
+        let fd_raw = pipewire_fd.as_raw_fd();
+        info!("Got PipeWire fd: {}", fd_raw);
+
+        // Store session to keep the portal stream alive (with leaked screencast)
         let mut session_lock = self.session.lock().await;
         *session_lock = Some(ActiveSession {
-            session,
+            _screencast: screencast,
+            _session: session,
             node_id,
+            pipewire_fd,
         });
 
         let (width, height) = stream
@@ -178,7 +197,7 @@ impl CaptureBackend for LinuxCaptureBackend {
 
         Ok(SelectionResult {
             node_id,
-            stream_fd: None,
+            stream_fd: Some(fd_raw),
             width,
             height,
         })
@@ -197,8 +216,8 @@ impl CaptureBackend for LinuxCaptureBackend {
         output_path: &Path,
     ) -> Result<ScreenshotResult, CaptureBackendError> {
         info!(
-            "Capturing screenshot from node {} to {:?}",
-            selection.node_id, output_path
+            "Capturing screenshot from node {} (fd={:?}) to {:?}",
+            selection.node_id, selection.stream_fd, output_path
         );
 
         // Initialize GStreamer (safe to call multiple times)
@@ -212,9 +231,15 @@ impl CaptureBackend for LinuxCaptureBackend {
         let got_frame = Arc::new(AtomicBool::new(false));
 
         // Build the pipeline: pipewiresrc ! videoconvert ! pngenc ! filesink
+        // Use fd if available (portal streams require it), otherwise fall back to path
+        let pipewiresrc_props = if let Some(fd) = selection.stream_fd {
+            format!("pipewiresrc fd={} path={} num-buffers=1", fd, selection.node_id)
+        } else {
+            format!("pipewiresrc path={} num-buffers=1", selection.node_id)
+        };
         let pipeline_str = format!(
-            "pipewiresrc path={} num-buffers=1 ! videoconvert ! pngenc ! filesink location={}",
-            selection.node_id,
+            "{} ! videoconvert ! pngenc ! filesink location={}",
+            pipewiresrc_props,
             output_path.display()
         );
 
@@ -380,11 +405,18 @@ impl CaptureBackend for LinuxCaptureBackend {
         selection: &SelectionResult,
         config: &CaptureConfig,
     ) -> Result<(), CaptureBackendError> {
-        info!("Starting recording from node {}", selection.node_id);
+        eprintln!("[DEBUG] LinuxCaptureBackend::start_recording: Starting from node {}", selection.node_id);
+
+        // Check if session is still alive
+        {
+            let session_lock = self.session.lock().await;
+            eprintln!("[DEBUG] LinuxCaptureBackend::start_recording: Session exists={}", session_lock.is_some());
+        }
 
         // Check if already recording
         {
             let recording_lock = self.recording.lock().await;
+            eprintln!("[DEBUG] LinuxCaptureBackend::start_recording: Checked recording lock, is_some={}", recording_lock.is_some());
             if recording_lock.is_some() {
                 return Err(CaptureBackendError::Internal(
                     "Recording already in progress".to_string(),
@@ -394,8 +426,10 @@ impl CaptureBackend for LinuxCaptureBackend {
 
         // Create recording pipeline
         let output_path = std::path::PathBuf::from(&config.output_path);
+        eprintln!("[DEBUG] LinuxCaptureBackend::start_recording: Creating pipeline to {:?}", output_path);
         let mut pipeline = RecordingPipeline::new(
             selection.node_id,
+            selection.stream_fd,
             output_path,
             config.fps,
             config.container,
@@ -405,22 +439,26 @@ impl CaptureBackend for LinuxCaptureBackend {
         )?;
 
         // Start the pipeline
+        eprintln!("[DEBUG] LinuxCaptureBackend::start_recording: Starting pipeline...");
         pipeline.start()?;
 
         // Store the pipeline
+        eprintln!("[DEBUG] LinuxCaptureBackend::start_recording: Storing pipeline...");
         let mut recording_lock = self.recording.lock().await;
         *recording_lock = Some(pipeline);
+        eprintln!("[DEBUG] LinuxCaptureBackend::start_recording: Pipeline stored, is_some={}", recording_lock.is_some());
 
         info!("Recording started successfully");
         Ok(())
     }
 
     async fn stop_recording(&self) -> Result<RecordingResult, CaptureBackendError> {
-        info!("Stopping recording");
+        eprintln!("[DEBUG] LinuxCaptureBackend::stop_recording: Stopping recording...");
 
         // Take the recording pipeline from storage
         let mut pipeline = {
             let mut recording_lock = self.recording.lock().await;
+            eprintln!("[DEBUG] LinuxCaptureBackend::stop_recording: Got lock, is_some={}", recording_lock.is_some());
             recording_lock.take().ok_or_else(|| {
                 CaptureBackendError::Internal("No recording in progress".to_string())
             })?

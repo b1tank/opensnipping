@@ -96,8 +96,9 @@ function App() {
       // Generate unique output path
       const outputPath = `/tmp/opensnipping-${Date.now()}.mp4`;
       
-      // First, start capture (shows portal picker, gets selection)
-      const newState = await startCapture({
+      // Start capture (shows portal picker, gets selection, and automatically starts recording)
+      // Recording is started immediately in Rust while PipeWire stream is valid
+      await startCapture({
         source: "screen",
         fps: 30,
         include_cursor: true,
@@ -106,10 +107,8 @@ function App() {
         output_path: outputPath,
       });
       
-      // If portal selection succeeded (state is now Recording), start actual video recording
-      if (newState === "recording") {
-        await startRecordingVideo();
-      }
+      // Recording is now started automatically by start_capture
+      // No need to call startRecordingVideo separately
     } catch (e) {
       setError(String(e));
     }
