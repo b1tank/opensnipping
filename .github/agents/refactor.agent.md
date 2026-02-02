@@ -31,3 +31,19 @@ Improve code quality over time by identifying and executing small, verifiable re
 - Avoid cross-layer changes unless necessary; if required, follow `tauri-contract`
 - No behavioral changes without explicit user request
 - Don’t edit build artifacts (e.g., `src-tauri/target/`)
+
+## Hard Rules
+
+- No source file may exceed **500 LOC** unless temporarily allowlisted with a written reason and expiry.
+  - LOC gate: `cd opensnipping && npm run check:loc`
+  - Allowlist: `opensnipping/scripts/loc.allowlist.tsv`
+- Keep the TS ⇄ Rust contract in sync in the same commit when touching commands/events/types.
+- Refactors must stay behavior-preserving unless the user explicitly requests a behavior change.
+- Every refactor step must keep tests green:
+  - Frontend: `cd opensnipping && npm test`
+  - Rust: `cd opensnipping/src-tauri && cargo test`
+
+## Notes
+
+- When splitting files, prefer multiple small modules over creating a new “god module”.
+- Keep boundaries explicit (IPC vs domain vs capture backends).
