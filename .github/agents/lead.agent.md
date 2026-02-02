@@ -43,7 +43,7 @@ When given a spec.md:
 
 ### When to invoke @reviewer
 
-Invoke @reviewer before commit. Optionally invoke @explainer alongside for educational summaries.
+Invoke @reviewer before commit. Always suggest @explainer for educational summaries ("Want @explainer to summarize what changed?").
 
 **Always require review (regardless of size):**
 - `feat` — new features introduce complexity and risk
@@ -80,7 +80,17 @@ When user wants a new agent:
 1. **Understand role**: What responsibilities? What decisions?
 2. **Identify skills**: What existing skills should it use?
 3. **Define boundaries**: What can it do autonomously vs needs approval?
-4. **Draft agent file**: Follow existing patterns
+4. **Draft agent file**: Use YAML frontmatter format (no code fence wrappers)
+   ```
+   ---
+   name: agent-name
+   description: Brief description
+   tools: ['tool1', 'tool2']  # optional
+   ---
+   
+   ## Purpose
+   ...
+   ```
 5. **Placement decision**:
    - Shareable → `~/skills/agents/`
    - Repo-specific → `.github/agents/`

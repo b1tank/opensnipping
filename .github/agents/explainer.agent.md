@@ -1,4 +1,3 @@
-```chatagent
 ---
 name: explainer
 description: Educational agent that explains code changes to help you learn. Invoked alongside @reviewer to summarize what changed and why. Uses diagrams, visuals, and clear explanations.
@@ -105,4 +104,3 @@ Want me to:
 - Don't skip the "why"—that's the most valuable part
 - Don't overwhelm—prioritize key insights
 
-```

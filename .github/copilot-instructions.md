@@ -212,7 +212,7 @@ Include brief rationale (e.g., "Tests pass; new `capture_screenshot` method is i
 
 **Pre-commit checks:** Use the `diff-check` skill to validate changes before committing.
 
-**Reviewer invocation criteria:** Invoke @reviewer (and optionally @explainer for learning) before commit when ANY of these apply:
+**Reviewer invocation criteria:** Invoke @reviewer before commit when ANY of these apply:
 
 | Category | Always Review | Size-Based Review |
 |----------|---------------|-------------------|
@@ -229,6 +229,8 @@ Include brief rationale (e.g., "Tests pass; new `capture_screenshot` method is i
 - Changes to shared utilities or core modules
 
 Skip review for: docs-only, test-only, config/chore, or contract-only additions with no runtime behavior.
+
+**Always suggest @explainer:** When reviewer criteria are met, also suggest invoking @explainer for educational summaries. Frame as: "Want @explainer to summarize what changed?"
 
 **Human verification decision flow:**
 - Verifiable yourself (tests pass, contract-only, deterministic logic) → commit and push
