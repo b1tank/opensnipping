@@ -36,6 +36,7 @@ Notes:
 
 - **Separation of concerns**: Frontend handles UI; backend handles capture logic.
 - **Modular code**: Write reusable, testable components and functions.
+- **Small files (<500 lines)**: Keep individual source files under 500 lines. Plan module splits upfront to avoid large files.
 - **Small changes**: Make incremental changes that are easy to review and test.
 - **Platform logic in Rust**: OS/media/capture code belongs in the backend; frontend stays declarative and mockable.
 - **First-class errors**: Every command/event must have explicit failure behavior (error code + message); UI must surface errors visibly.
@@ -123,6 +124,7 @@ New user actions (commands) require end-to-end wiring:
 
 - **Atomic changes**: One feature slice per PR/commit.
 - **Avoid large refactors** unless required by spec/plan.
+- **File size limit**: If any file exceeds or will exceed 500 lines, prompt user to confirm refactor before proceeding.
 - **Zero warnings**: Compilation must have no warnings or errors. Fix hygiene issues immediately (e.g., `cargo check` dead_code warnings).
 - **No hardcoded paths** in UI beyond temporary MVP scaffolding (e.g., `/tmp/recording.mp4` is a placeholder).
 - **Never edit build artifacts** (especially `opensnipping/src-tauri/target/`).
