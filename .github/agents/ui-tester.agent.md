@@ -1,7 +1,7 @@
 ---
 name: ui-tester
 description: Automated UI verification using MCP Bridge. Starts app, connects via WebSocket, inspects elements, captures screenshots, verifies backend state. Falls back to manual verification if MCP fails.
-tools: ['vscode', 'execute', 'read', 'search', 'mcp__hypothesi_ta_driver_session', 'mcp__hypothesi_ta_webview_screenshot', 'mcp__hypothesi_ta_webview_dom_snapshot', 'mcp__hypothesi_ta_webview_find_element', 'mcp__hypothesi_ta_webview_interact', 'mcp__hypothesi_ta_webview_keyboard', 'mcp__hypothesi_ta_webview_wait_for', 'mcp__hypothesi_ta_ipc_get_backend_state', 'mcp__hypothesi_ta_ipc_execute_command']
+tools: ['vscode', 'execute', 'read', 'search', '@hypothesi/tauri-mcp-server/*']
 ---
 
 ## Purpose
