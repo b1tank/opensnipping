@@ -303,3 +303,26 @@ When explaining code or changes:
 - Offer to generate visual HTML presentations for complex concepts
 - When reviewing unfamiliar code, summarize structure before diving in
 - Ask follow-up questions to fill knowledge gaps
+
+## Syncing Shareable Content
+
+`~/skills/` is the source of truth for reusable agents, prompts, and skills.
+
+**After improving agents/prompts/skills in this repo:**
+
+```bash
+# 1. Copy improvements back to source
+cp .github/agents/<name>.agent.md ~/skills/agents/
+cp .github/prompts/<name>.prompt.md ~/skills/prompts/
+cp -r .github/skills/<name>/ ~/skills/skills/
+
+# 2. Commit and push source repo
+cd ~/skills && git add . && git commit -m "agent: <description>" && git push
+
+# 3. Sync to other repos (optional)
+~/skills/sync.sh ~/other-project
+```
+
+**What lives where:**
+- `~/skills/` — shareable content (generic agents, domain skills)
+- `.github/` — repo-specific content + copies of shareable content
