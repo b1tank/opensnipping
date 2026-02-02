@@ -1,22 +1,21 @@
-import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { listen, UnlistenFn } from "@tauri-apps/api/event";
+import { useState, useEffect, useCallback } from "react";
 import "./App.css";
+import { CaptureState } from "./types";
 import {
-  CaptureState,
-  StateChangedEvent,
-  ErrorEvent,
-  SelectionCompleteEvent,
-  ScreenshotCompleteEvent,
-  RecordingStartedEvent,
-  RecordingStoppedEvent,
-  EVENT_STATE_CHANGED,
-  EVENT_ERROR,
-  EVENT_SELECTION_COMPLETE,
-  EVENT_SCREENSHOT_COMPLETE,
-  EVENT_RECORDING_STARTED,
-  EVENT_RECORDING_STOPPED,
-} from "./types";
+  ping,
+  getState,
+  startCapture,
+  pauseRecording,
+  resumeRecording,
+  finalizeComplete,
+  resetError,
+  takeScreenshot,
+  startRecordingVideo,
+  stopRecordingVideo,
+  pauseRecordingVideo,
+  resumeRecordingVideo,
+  useCaptureEvents,
+} from "./tauri";
 import { AnnotationCanvas } from "./components/AnnotationCanvas";
 
 type AppMode = "screenshot" | "record";
@@ -30,58 +29,61 @@ function App() {
   const [isCapturingScreenshot, setIsCapturingScreenshot] = useState(false);
   const [recordingPath, setRecordingPath] = useState<string | null>(null);
 
-  // Listen to Rust events
+  // Handle state changes
+  const handleStateChanged = useCallback((state: CaptureState) => {
+    setCaptureState(state);
+    if (state !== "error") {
+      setError(null);
+    }
+  }, []);
+
+  // Handle errors
+  const handleError = useCallback((message: string) => {
+    setError(message);
+  }, []);
+
+  // Handle selection complete (for logging/debugging)
+  const handleSelectionComplete = useCallback((selection: unknown) => {
+    console.log("Selection complete:", selection);
+  }, []);
+
+  // Handle screenshot complete
+  const handleScreenshotComplete = useCallback((path: string) => {
+    console.log("Screenshot complete:", path);
+    setScreenshotPath(path);
+    setIsCapturingScreenshot(false);
+  }, []);
+
+  // Handle recording started
+  const handleRecordingStarted = useCallback((outputPath: string) => {
+    console.log("Recording started:", outputPath);
+    setRecordingPath(outputPath);
+  }, []);
+
+  // Handle recording stopped
+  const handleRecordingStopped = useCallback((path: string, durationMs: number) => {
+    console.log("Recording stopped:", path, durationMs);
+    setRecordingPath(null);
+    alert(`Recording saved to: ${path}\nDuration: ${Math.round(durationMs / 1000)}s`);
+  }, []);
+
+  // Subscribe to capture events
+  useCaptureEvents({
+    onStateChanged: handleStateChanged,
+    onError: handleError,
+    onSelectionComplete: handleSelectionComplete,
+    onScreenshotComplete: handleScreenshotComplete,
+    onRecordingStarted: handleRecordingStarted,
+    onRecordingStopped: handleRecordingStopped,
+  });
+
+  // Fetch initial state
   useEffect(() => {
-    const unlisteners: UnlistenFn[] = [];
-
-    // Listen for state changes
-    listen<StateChangedEvent>(EVENT_STATE_CHANGED, (event) => {
-      setCaptureState(event.payload.state);
-      if (event.payload.state !== "error") {
-        setError(null);
-      }
-    }).then((unlisten) => unlisteners.push(unlisten));
-
-    // Listen for errors
-    listen<ErrorEvent>(EVENT_ERROR, (event) => {
-      setError(event.payload.error.message);
-    }).then((unlisten) => unlisteners.push(unlisten));
-
-    // Listen for selection complete (for logging/debugging)
-    listen<SelectionCompleteEvent>(EVENT_SELECTION_COMPLETE, (event) => {
-      console.log("Selection complete:", event.payload.selection);
-    }).then((unlisten) => unlisteners.push(unlisten));
-
-    // Listen for screenshot complete
-    listen<ScreenshotCompleteEvent>(EVENT_SCREENSHOT_COMPLETE, (event) => {
-      console.log("Screenshot complete:", event.payload);
-      setScreenshotPath(event.payload.path);
-      setIsCapturingScreenshot(false);
-    }).then((unlisten) => unlisteners.push(unlisten));
-
-    // Listen for recording started
-    listen<RecordingStartedEvent>(EVENT_RECORDING_STARTED, (event) => {
-      console.log("Recording started:", event.payload.output_path);
-      setRecordingPath(event.payload.output_path);
-    }).then((unlisten) => unlisteners.push(unlisten));
-
-    // Listen for recording stopped
-    listen<RecordingStoppedEvent>(EVENT_RECORDING_STOPPED, (event) => {
-      console.log("Recording stopped:", event.payload);
-      setRecordingPath(null);
-      alert(`Recording saved to: ${event.payload.path}\nDuration: ${Math.round(event.payload.duration_ms / 1000)}s`);
-    }).then((unlisten) => unlisteners.push(unlisten));
-
-    // Fetch initial state
-    invoke<CaptureState>("get_state").then(setCaptureState);
-
-    return () => {
-      unlisteners.forEach((unlisten) => unlisten());
-    };
+    getState().then(setCaptureState);
   }, []);
 
   async function handlePingRust() {
-    const result = await invoke<string>("ping");
+    const result = await ping();
     setPingResult(result);
   }
 
@@ -95,20 +97,18 @@ function App() {
       const outputPath = `/tmp/opensnipping-${Date.now()}.mp4`;
       
       // First, start capture (shows portal picker, gets selection)
-      const newState = await invoke<CaptureState>("start_capture", {
-        config: {
-          source: "screen",
-          fps: 30,
-          include_cursor: true,
-          audio: { system: false, mic: false },
-          container: "mp4",
-          output_path: outputPath,
-        },
+      const newState = await startCapture({
+        source: "screen",
+        fps: 30,
+        include_cursor: true,
+        audio: { system: false, mic: false },
+        container: "mp4",
+        output_path: outputPath,
       });
       
       // If portal selection succeeded (state is now Recording), start actual video recording
       if (newState === "recording") {
-        await invoke("start_recording_video");
+        await startRecordingVideo();
       }
     } catch (e) {
       setError(String(e));
@@ -117,8 +117,8 @@ function App() {
 
   async function handlePauseRecording() {
     try {
-      await invoke("pause_recording");
-      await invoke("pause_recording_video");
+      await pauseRecording();
+      await pauseRecordingVideo();
     } catch (e) {
       setError(String(e));
     }
@@ -126,8 +126,8 @@ function App() {
 
   async function handleResumeRecording() {
     try {
-      await invoke("resume_recording");
-      await invoke("resume_recording_video");
+      await resumeRecording();
+      await resumeRecordingVideo();
     } catch (e) {
       setError(String(e));
     }
@@ -136,7 +136,7 @@ function App() {
   async function handleStopRecording() {
     try {
       // Stop actual video recording (this also transitions state)
-      await invoke("stop_recording_video");
+      await stopRecordingVideo();
     } catch (e) {
       setError(String(e));
     }
@@ -144,7 +144,7 @@ function App() {
 
   async function handleFinalizeComplete() {
     try {
-      await invoke("finalize_complete");
+      await finalizeComplete();
     } catch (e) {
       setError(String(e));
     }
@@ -152,7 +152,7 @@ function App() {
 
   async function handleResetError() {
     try {
-      await invoke("reset_error");
+      await resetError();
       setError(null);
     } catch (e) {
       setError(String(e));
@@ -163,15 +163,13 @@ function App() {
     setIsCapturingScreenshot(true);
     setError(null);
     try {
-      await invoke("take_screenshot", {
-        config: {
-          source: "screen",
-          fps: 30,
-          include_cursor: true,
-          audio: { system: false, mic: false },
-          container: "mp4",
-          output_path: "/tmp/screenshot.png",
-        },
+      await takeScreenshot({
+        source: "screen",
+        fps: 30,
+        include_cursor: true,
+        audio: { system: false, mic: false },
+        container: "mp4",
+        output_path: "/tmp/screenshot.png",
       });
     } catch (e) {
       setError(String(e));
