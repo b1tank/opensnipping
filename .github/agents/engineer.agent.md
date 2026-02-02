@@ -137,8 +137,29 @@ Good candidates: `git status`, `npm test`, `cargo check`, `ls`, `grep`
 
 ## Parallel Work Mode
 
-When running in a separate window for parallel work:
+When running in a separate window (git worktree) for parallel work:
 - Stay focused on assigned scope
+- Work on a feature branch, not main
 - Report completion to main session
 - Don't make changes outside assigned files
 - Coordinate if encountering blockers
+
+### Integrating Back to Main
+
+**Always rebase, never merge** to keep history linear:
+
+```bash
+# Before finishing, sync with main
+git fetch origin main
+git rebase origin/main
+
+# Resolve any conflicts, then push feature branch
+git push --force-with-lease
+
+# Human (or main session) integrates:
+git checkout main
+git rebase <feature-branch>
+git push
+```
+
+If conflicts arise during rebase, resolve them or report back—don't create merge commits.

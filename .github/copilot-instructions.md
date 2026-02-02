@@ -246,6 +246,23 @@ When you discover independent secondary work (bugs, missing docs/tests, refactor
 
 See [engineer.agent.md](agents/engineer.agent.md) for delegation protocols.
 
+### Git Worktree Workflow
+
+Background agents work in git worktrees on feature branches, not main. When integrating back:
+
+**Always rebase, never merge:**
+```bash
+# In worktree (feature branch)
+git rebase main
+
+# On main (after worktree work is complete)
+git checkout main
+git rebase <feature-branch>  # Fast-forward if linear
+git push
+```
+
+This keeps history linear and avoids merge commits from parallel work.
+
 ## Agent Notes
 
 **Agent file format:** `.agent.md` files use raw markdown with YAML frontmatter—never wrap in code fences like ` ```chatagent `.
