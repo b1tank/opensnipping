@@ -24,5 +24,8 @@
         "wc": true,
         "npx tsc": true,
         "cp": true
-    }
+    },
+    "rust-analyzer.linkedProjects": [
+        "opensnipping/src-tauri/Cargo.toml"
+    ]
 }
